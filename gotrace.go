@@ -17,6 +17,39 @@ type Vec3 struct {
     x, y, z float;
 }
 
+func (v *Vec3) add(b *Vec3) *Vec3 {
+    v.x += b.x;
+    v.y += b.y;
+    v.z += b.z;
+    return v;
+}
+
+func (v *Vec3) sub(b *Vec3) *Vec3 {
+    v.x -= b.x;
+    v.y -= b.y;
+    v.z -= b.z;
+    return v;
+}
+
+func (v *Vec3) mulf(b float) *Vec3 {
+    v.x *= b;
+    v.y *= b;
+    v.z *= b;
+    return v;
+}
+
+func (v *Vec3) normalize() *Vec3 {
+    return v.mulf(1.0 / sqrtf(v.dot(v)));
+}
+
+func (v Vec3) normalized() Vec3 {
+    return *v.mulf(1.0 / sqrtf(v.dot(&v)));
+}
+
+func (v *Vec3) dot(b *Vec3) float {
+    return v.x * b.x + v.y * b.y + v.z * b.z;
+}
+
 func vec3add(a Vec3, b Vec3) Vec3 {
     a.x += b.x;
     a.y += b.y;
@@ -162,7 +195,7 @@ func (s *Scene) rayTrace(r Ray) Vec3 {
     }
     p := vec3add(r.orig, vec3add(vec3mulf(r.dir, h.distance), vec3mulf(h.pos, delta)));
     if intersect(Ray{p, vec3mulf(s.light, -1.0)}, s.g).distance < infinity {
-        // There's an object between us and the light.
+        // There`s an object between us and the light.
         return ambientSphereColor;
     }
     litColor := vec3mulf(diffuseSphereColor, -g);
