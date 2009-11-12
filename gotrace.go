@@ -9,6 +9,7 @@ import math "math"
 var infinity float = float(math.Inf(1));
 var delta float = float(math.Sqrt(1.19209E-07)); // sqrt(float_epsilon)
 
+
 func sqrtf(a float) float {
     return float(math.Sqrt(float64(a)));
 }
@@ -94,16 +95,18 @@ type Hit struct {
     sphere *Sphere;
 }
 
+var hitinfinity Hit = Hit{infinity, Vec3{0, 0, 0}, nil};
+
 type Ray struct {
     orig, dir Vec3;
 }
 
 type Geometry interface {
-    Intersect(h Hit, r Ray) Hit;
+    Intersect(h *Hit, r *Ray) *Hit;
     Print(); // Temporary until fmt handles interfaces.
 }
 
-func (s *Sphere) RaySphere(r Ray) float {
+func (s *Sphere) RaySphere(r *Ray) float {
     v := vec3sub(s.center, r.orig);
     b := vec3dot(v, r.dir);
     disc := b*b - vec3dot(v, v) + s.radius * s.radius;
@@ -122,12 +125,12 @@ func (s *Sphere) RaySphere(r Ray) float {
     return t2;
 }
 
-func (s *Sphere) Intersect(h Hit, r Ray) Hit {
+func (s *Sphere) Intersect(h *Hit, r *Ray) *Hit {
     lambda := s.RaySphere(r);
     if lambda >= h.distance {
         return h;
     }
-    return Hit{lambda, normalize(vec3add(r.orig, vec3sub(vec3mulf(r.dir, lambda), s.center))), s};
+    return &Hit{lambda, normalize(vec3add(r.orig, vec3sub(vec3mulf(r.dir, lambda), s.center))), s};
 }
 
 func (s *Sphere) Print() {
@@ -148,7 +151,7 @@ func (g *Group) Print() {
     }
 }
 
-func (g *Group) Intersect(h Hit, r Ray) Hit {
+func (g *Group) Intersect(h *Hit, r *Ray) *Hit {
     l := g.bound.RaySphere(r);
     if l >= h.distance {
         return h;
@@ -167,8 +170,8 @@ func NewGroup(bound Sphere, children []Geometry) *Group {
     return g;
 }
 
-func intersect(r Ray, s Geometry) Hit {
-    return s.Intersect(Hit{infinity, Vec3{0, 0, 0}, nil}, r);
+func intersect(r *Ray, s Geometry) *Hit {
+    return s.Intersect(&hitinfinity, r);
 }
 
 type Scene struct {
@@ -183,7 +186,7 @@ func createScene(light Vec3, g Geometry) *Scene {
     return scene;
 }
 
-func (s *Scene) rayTrace(r Ray) Vec3 {
+func (s *Scene) rayTrace(r *Ray) Vec3 {
     h := intersect(r, s.g);
     if h.distance == infinity {
         return backgroundColor;
@@ -194,7 +197,7 @@ func (s *Scene) rayTrace(r Ray) Vec3 {
         return ambientSphereColor;
     }
     p := vec3add(r.orig, vec3add(vec3mulf(r.dir, h.distance), vec3mulf(h.pos, delta)));
-    if intersect(Ray{p, vec3mulf(s.light, -1.0)}, s.g).distance < infinity {
+    if intersect(&Ray{p, vec3mulf(s.light, -1.0)}, s.g).distance < infinity {
         // There`s an object between us and the light.
         return ambientSphereColor;
     }
@@ -368,10 +371,10 @@ func (renderer *Renderer) renderRect(tint Vec3, r *Rect) {
         	    if y == r.t || y == r.b-1 || x == r.l || x == r.r-1 {
         	        g = tint;
         	    } else {
-        	        g = renderer.scene.rayTrace(ray);
+        	        g = renderer.scene.rayTrace(&ray);
         	    }
         	} else {
-        	    g = renderer.scene.rayTrace(ray);
+        	    g = renderer.scene.rayTrace(&ray);
         	}
             renderer.t.SetV(x, renderer.cam.h - (y + 1), g);
         }
