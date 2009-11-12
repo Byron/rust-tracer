@@ -346,10 +346,11 @@ type Camera struct {
     h int;
 }
 
-func (c *Camera) rayForPixel(x int, y int) Ray {
-	dir := Vec3{float(x) - float(c.w) * 0.5, float(y) - float(c.h) * 0.5,  float(c.w)};
-	dir.normalize();
-    return Ray{c.eye, dir};
+func (c *Camera) setRayDirForPixel(r *Ray, x int, y int){
+	r.dir.x = float(x) - float(c.w) * 0.5;
+	r.dir.y = float(y) - float(c.h) * 0.5;
+	r.dir.z = float(c.w);
+	r.dir.normalize();
 }
 
 type Renderer struct {
@@ -362,9 +363,10 @@ type Renderer struct {
 }
 
 func (renderer *Renderer) renderRect(tint Vec3, r *Rect) {
+	ray := Ray{orig:renderer.cam.eye};
     for y := r.t; y < r.b; y++ {
         for x := r.l; x < r.r; x++ {
-            ray := renderer.cam.rayForPixel(x, y);
+            renderer.cam.setRayDirForPixel(&ray, x, y);
             var g Vec3;
             if false {
                 // Draw a rectangle around the bounds of our rendering.
