@@ -347,8 +347,8 @@ type Camera struct {
 }
 
 func (c *Camera) rayForPixel(x int, y int) Ray {
-    dir := normalize(Vec3{float(x) - float(c.w) * 0.5, float(y) - float(c.h) * 0.5, 
-        float(c.w)});
+	dir := Vec3{float(x) - float(c.w) * 0.5, float(y) - float(c.h) * 0.5,  float(c.w)};
+	dir.normalize();
     return Ray{c.eye, dir};
 }
 
