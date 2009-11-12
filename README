@@ -1,0 +1,3 @@
+This go based raytracer was originally written by Jack Palevich. For more information, see http://grammerjack.blogspot.com/2009/11/multi-threaded-go-raytracer.html.
+
+I use this as a performance test for go and to reveal possible bottlenecks and issues with high-performance math based 'stress'.
