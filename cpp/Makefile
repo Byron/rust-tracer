@@ -1,14 +1,14 @@
 G=6g
 L=6l
 
-all: gotrace
+all: cpptrace
 .phony : image
 
 clean:
-	rm -f gotrace out.tga
+	rm -f cpptrace out.tga
 
-gotrace: ray.cpp
-	g++ -O3 -ffast-math -funroll-all-loops ray.cpp -o gotrace
+cpptrace: ray.cpp
+	g++ -O3 -ffast-math -funroll-all-loops ray.cpp -o cpptrace
 
-image : gotrace
-	time ./gotrace > out.tga
+image : cpptrace
+	time ./cpptrace > out.tga
