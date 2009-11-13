@@ -366,31 +366,30 @@ type Renderer struct {
 
 func (ren *Renderer) renderRect(tint Vec3, r *Rect) {
 	ray := Ray{orig:ren.cam.eye};
+	
     for y := r.t; y < r.b; y++ {
         for x := r.l; x < r.r; x++ {
         	var g Vec3;
 			for ssx := 0; ssx < ren.ss; ssx++ {
 				for ssy := 0; ssy < ren.ss; ssy++ {
-					var xres float = float(x+ssx) / float(ren.ss)-float(ren.xres/2.0);
-					var yres float = float(y+ssy) / float(ren.ss)-float(ren.yres/2.0);
+					var xres float = float(x) + float(ssx) / float(ren.ss);
+					var yres float = float(y) + float(ssy) / float(ren.ss);
+					
 					ren.cam.setRayDirForPixel(&ray, xres, yres);
 					if false {
 						// Draw a rectangle around the bounds of our rendering.
 						if y == r.t || y == r.b-1 || x == r.l || x == r.r-1 {
 							g = tint;
 						} else {
-							t := ren.scene.rayTrace(&ray);
-							g.add(&t);
+							g = vec3add(g, ren.scene.rayTrace(&ray));
 						}
 					} else {
-						t := ren.scene.rayTrace(&ray);
-						g.add(&t);
+						g = vec3add(g, ren.scene.rayTrace(&ray));
 					}
 				} // END for each y subsample
             } // END for each x subsample
             
-            g.mulf( 1.0 / float(ren.ss * ren.ss) );
-            ren.t.SetV(x, ren.cam.h - (y + 1), g);
+            ren.t.SetV(x, ren.cam.h - (y + 1), vec3mulf(g, 1.0 / float(ren.ss * ren.ss)));
             
         }// END for each x pixel 
     }// END for each y pixel
@@ -417,7 +416,7 @@ func main() {
     w := n;
     h := n;
     workers := 8;
-    ss := 1;
+    ss := 1;			// oversampling - use 4 to get 16 samples
     t := NewTexture(w, h);
     light := normalize(Vec3{-1.0, -3.0, 2.0});
     sp := createSpherePyramid(level, Vec3{0.0, -1.0, 0.0}, 1.0);
