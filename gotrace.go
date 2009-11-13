@@ -327,7 +327,7 @@ type Rect struct {
     b int;
 }
 
-func newRect(l int, t int, r int, b int ) *Rect {
+func newRect(l, t, r, b int ) *Rect {
     rect := new(Rect);
     rect.l = l;
     rect.t = t;
@@ -346,9 +346,9 @@ type Camera struct {
     h int;
 }
 
-func (c *Camera) setRayDirForPixel(r *Ray, x int, y int){
-	r.dir.x = float(x) - float(c.w) * 0.5;
-	r.dir.y = float(y) - float(c.h) * 0.5;
+func (c *Camera) setRayDirForPixel(r *Ray, x,y float){
+	r.dir.x = x - float(c.w) * 0.5;
+	r.dir.y = y - float(c.h) * 0.5;
 	r.dir.z = float(c.w);
 	r.dir.normalize();
 }
@@ -357,30 +357,43 @@ type Renderer struct {
     scene *Scene;
     t *Texture;
     cam *Camera;
+    ss int;					// oversampling
+    xres, yres int;			// image resolution
     jobChan chan Rect;
     quitChan chan bool;
     joinChan chan bool;
 }
 
-func (renderer *Renderer) renderRect(tint Vec3, r *Rect) {
-	ray := Ray{orig:renderer.cam.eye};
+func (ren *Renderer) renderRect(tint Vec3, r *Rect) {
+	ray := Ray{orig:ren.cam.eye};
     for y := r.t; y < r.b; y++ {
         for x := r.l; x < r.r; x++ {
-            renderer.cam.setRayDirForPixel(&ray, x, y);
-            var g Vec3;
-            if false {
-                // Draw a rectangle around the bounds of our rendering.
-        	    if y == r.t || y == r.b-1 || x == r.l || x == r.r-1 {
-        	        g = tint;
-        	    } else {
-        	        g = renderer.scene.rayTrace(&ray);
-        	    }
-        	} else {
-        	    g = renderer.scene.rayTrace(&ray);
-        	}
-            renderer.t.SetV(x, renderer.cam.h - (y + 1), g);
-        }
-    }
+        	var g Vec3;
+			for ssx := 0; ssx < ren.ss; ssx++ {
+				for ssy := 0; ssy < ren.ss; ssy++ {
+					var xres float = float(x+ssx) / float(ren.ss)-float(ren.xres/2.0);
+					var yres float = float(y+ssy) / float(ren.ss)-float(ren.yres/2.0);
+					ren.cam.setRayDirForPixel(&ray, xres, yres);
+					if false {
+						// Draw a rectangle around the bounds of our rendering.
+						if y == r.t || y == r.b-1 || x == r.l || x == r.r-1 {
+							g = tint;
+						} else {
+							t := ren.scene.rayTrace(&ray);
+							g.add(&t);
+						}
+					} else {
+						t := ren.scene.rayTrace(&ray);
+						g.add(&t);
+					}
+				} // END for each y subsample
+            } // END for each x subsample
+            
+            g.mulf( 1.0 / float(ren.ss * ren.ss) );
+            ren.t.SetV(x, ren.cam.h - (y + 1), g);
+            
+        }// END for each x pixel 
+    }// END for each y pixel
 }
 
 func (renderer *Renderer) worker(tint Vec3) {
@@ -404,6 +417,7 @@ func main() {
     w := n;
     h := n;
     workers := 8;
+    ss := 1;
     t := NewTexture(w, h);
     light := normalize(Vec3{-1.0, -3.0, 2.0});
     sp := createSpherePyramid(level, Vec3{0.0, -1.0, 0.0}, 1.0);
@@ -413,7 +427,7 @@ func main() {
     quitChan := make(chan bool);
     joinChan := make(chan bool);
     jobChan := make(chan Rect);
-    renderer := Renderer{scene, t, &camera, jobChan, quitChan, joinChan};
+    renderer := Renderer{scene, t, &camera, ss, w, h, jobChan, quitChan, joinChan};
     for w := 0; w < workers; w++ {
         tint := Vec3{0.5, float(w) / float(workers), 0.5};
         go renderer.worker(tint);
