@@ -6,16 +6,16 @@ import io "io"
 import os "os"
 import math "math"
 
-var infinity float = float(math.Inf(1));
-var delta float = float(math.Sqrt(1.19209E-07)); // sqrt(float_epsilon)
+var infinity float64 = float64(math.Inf(1));
+var delta float64 = float64(math.Sqrt(1.19209E-07)); // sqrt(float_epsilon)
 
 
-func sqrtf(a float) float {
-    return float(math.Sqrt(float64(a)));
+func sqrtf(a float64) float64 {
+    return float64(math.Sqrt(float64(a)));
 }
 
 type Vec3 struct {
-    x, y, z float;
+    x, y, z float64;
 }
 
 func (v *Vec3) add(b *Vec3) *Vec3 {
@@ -32,7 +32,7 @@ func (v *Vec3) sub(b *Vec3) *Vec3 {
     return v;
 }
 
-func (v *Vec3) mulf(b float) *Vec3 {
+func (v *Vec3) mulf(b float64) *Vec3 {
     v.x *= b;
     v.y *= b;
     v.z *= b;
@@ -47,7 +47,7 @@ func (v Vec3) normalized() Vec3 {
     return *v.mulf(1.0 / sqrtf(v.dot(&v)));
 }
 
-func (v *Vec3) dot(b *Vec3) float {
+func (v *Vec3) dot(b *Vec3) float64 {
     return v.x * b.x + v.y * b.y + v.z * b.z;
 }
 
@@ -65,14 +65,14 @@ func vec3sub(a Vec3, b Vec3) Vec3 {
     return a;
 }
 
-func vec3mulf(a Vec3, b float) Vec3 {
+func vec3mulf(a Vec3, b float64) Vec3 {
     a.x *= b;
     a.y *= b;
     a.z *= b;
     return a;
 }
 
-func vec3dot(a Vec3, b Vec3) float {
+func vec3dot(a Vec3, b Vec3) float64 {
     return a.x * b.x + a.y * b.y + a.z * b.z;
 }
 
@@ -86,11 +86,11 @@ var ambientSphereColor Vec3 = Vec3{0.2, 0.3, 0.2};
 
 type Sphere struct {
     center Vec3;
-    radius float;
+    radius float64;
 }
 
 type Hit struct {
-    distance float;
+    distance float64;
     pos Vec3;
     sphere *Sphere;
 }
@@ -106,7 +106,7 @@ type Geometry interface {
     Print(); // Temporary until fmt handles interfaces.
 }
 
-func (s *Sphere) RaySphere(r *Ray) float {
+func (s *Sphere) RaySphere(r *Ray) float64 {
     v := vec3sub(s.center, r.orig);
     b := vec3dot(v, r.dir);
     disc := b*b - vec3dot(v, v) + s.radius * s.radius;
@@ -206,7 +206,7 @@ func (s *Scene) rayTrace(r *Ray) Vec3 {
     return totalColor;
 }
 
-func createSpherePyramid(level int, c Vec3, r float) Geometry {
+func createSpherePyramid(level int, c Vec3, r float64) Geometry {
     s := new(Sphere);
     s.center = c;
     s.radius = r;
@@ -220,7 +220,7 @@ func createSpherePyramid(level int, c Vec3, r float) Geometry {
     rn := 3.0*r/sqrtf(12.0);
     for dz := -1; dz<=1; dz+=2 {
         for dx := -1; dx<=1; dx+=2 {
-            newc := vec3add(c, vec3mulf(Vec3{float(dx), 1.0, float(dz)}, rn));
+            newc := vec3add(c, vec3mulf(Vec3{float64(dx), 1.0, float64(dz)}, rn));
             children[i] = createSpherePyramid(level-1, newc, r * 0.5);
             i++;
         }
@@ -305,7 +305,7 @@ func (t *Texture) SetRgba(x int, y int, r byte, g byte, b byte, a byte) {
     t.buf[o + 3] = a;
 }
 
-func f2b(f float) byte {
+func f2b(f float64) byte {
     scaled := 0.5 + f * 255.0;
     switch {
     case scaled < 0:
@@ -346,10 +346,10 @@ type Camera struct {
     h int;
 }
 
-func (c *Camera) setRayDirForPixel(r *Ray, x,y float){
-	r.dir.x = x - float(c.w) * 0.5;
-	r.dir.y = y - float(c.h) * 0.5;
-	r.dir.z = float(c.w);
+func (c *Camera) setRayDirForPixel(r *Ray, x,y float64){
+	r.dir.x = x - float64(c.w) * 0.5;
+	r.dir.y = y - float64(c.h) * 0.5;
+	r.dir.z = float64(c.w);
 	r.dir.normalize();
 }
 
@@ -372,8 +372,8 @@ func (ren *Renderer) renderRect(tint Vec3, r *Rect) {
         	var g Vec3;
 			for ssx := 0; ssx < ren.ss; ssx++ {
 				for ssy := 0; ssy < ren.ss; ssy++ {
-					var xres float = float(x) + float(ssx) / float(ren.ss);
-					var yres float = float(y) + float(ssy) / float(ren.ss);
+					var xres float64 = float64(x) + float64(ssx) / float64(ren.ss);
+					var yres float64 = float64(y) + float64(ssy) / float64(ren.ss);
 					
 					ren.cam.setRayDirForPixel(&ray, xres, yres);
 					if false {
@@ -389,7 +389,7 @@ func (ren *Renderer) renderRect(tint Vec3, r *Rect) {
 				} // END for each y subsample
             } // END for each x subsample
             
-            ren.t.SetV(x, ren.cam.h - (y + 1), vec3mulf(g, 1.0 / float(ren.ss * ren.ss)));
+            ren.t.SetV(x, ren.cam.h - (y + 1), vec3mulf(g, 1.0 / float64(ren.ss * ren.ss)));
             
         }// END for each x pixel 
     }// END for each y pixel
@@ -428,7 +428,7 @@ func main() {
     jobChan := make(chan Rect);
     renderer := Renderer{scene, t, &camera, ss, w, h, jobChan, quitChan, joinChan};
     for w := 0; w < workers; w++ {
-        tint := Vec3{0.5, float(w) / float(workers), 0.5};
+        tint := Vec3{0.5, float64(w) / float64(workers), 0.5};
         go renderer.worker(tint);
     }
     for y := 0; y < h; y += chunkh {
@@ -442,7 +442,7 @@ func main() {
     for w := 0; w < workers; w++ {
         <- renderer.joinChan;
     }    
-    od, err := os.Open("out.tga", os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0666);
+    od, err := os.OpenFile("out.tga", os.O_WRONLY | os.O_CREATE | os.O_TRUNC, 0666);
     if err == nil {
         t.WriteTGA(od);
         od.Close();
