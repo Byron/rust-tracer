@@ -1,3 +1,4 @@
-*.6
 gotrace
 out.ppm
+out.tga
+*.sublime-workspace

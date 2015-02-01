@@ -103,7 +103,7 @@ Scene *create(int level, const Vec &c, double r) {
 }
 
 int main(int argc, char *argv[]) {
-  int level = 8, n = 512, ss = 1;
+  int level = 8, n = 1024, ss = 1;
   if (argc == 2) level = atoi(argv[1]);
   Vec light = unitise(Vec(-1, -3, 2));
   Scene *s(create(level, Vec(0, -1, 0), 1));

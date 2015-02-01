@@ -243,23 +243,6 @@ func NewTexture(w int, h int) *Texture {
 	return t
 }
 
-func (t *Texture) WritePPM(w io.Writer) {
-	fmt.Fprintf(w, "P6\n%d\n%d\n%d\n", t.w, t.h, 255)
-	buf := make([]byte, t.w*3)
-	i := 0
-	for y := t.h - 1; y >= 0; y-- {
-		o := 0
-		for x := 0; x < t.w; x++ {
-			buf[o] = t.buf[i]
-			buf[o+1] = t.buf[i+1]
-			buf[o+2] = t.buf[i+2]
-			o += 3
-			i += 4
-		}
-		w.Write(buf)
-	}
-}
-
 func formatTGAShort(buf []byte, offset int, value int) {
 	buf[offset] = byte(value & 0xff)
 	buf[offset+1] = byte((value >> 8) & 0xff)
@@ -412,7 +395,7 @@ func (renderer *Renderer) worker(tint Vec3) {
 
 func main() {
 	level := 8
-	n := 512
+	n := 1024
 	chunkw := 16
 	chunkh := 16
 	w := n
