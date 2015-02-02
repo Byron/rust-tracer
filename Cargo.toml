@@ -1,0 +1,13 @@
+[package]
+
+name = "tracer"
+version = "0.0.1"
+authors = ["Sebastian Thiel <byronimo@gmail.com>"]
+
+[lib]
+name = "tracer"
+path = "src/rust/lib.rs"
+
+[[bin]]
+name = "rtrace"
+path = "src/rust/main.rs"

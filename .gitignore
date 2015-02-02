@@ -2,3 +2,7 @@ gotrace
 out.ppm
 out.tga
 *.sublime-workspace
+
+
+target/
+Cargo.lock
