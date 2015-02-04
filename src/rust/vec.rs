@@ -2,13 +2,14 @@
 //! floating point precision.
 
 use std::num::Float;
+use std::default::Default;
 use std::ops::{Add, Sub, Mul};
 
-#[derive(Debug, PartialEq, Eq, Copy)]
+#[derive(Debug, PartialEq, Eq, Copy, Default)]
 pub struct Vector<T: Float> {
-    x: T,
-    y: T,
-    z: T,
+    pub x: T,
+    pub y: T,
+    pub z: T,
 }
 
 impl<T: Float> Add for Vector<T> {
@@ -47,7 +48,7 @@ impl<T: Float> Mul for Vector<T> {
 
 impl<'a, T: Float> Vector<T> {
     #[inline(always)]
-    fn mulfed(&self, m: T) -> Vector<T> {
+    pub fn mulfed(&self, m: T) -> Vector<T> {
         Vector {
             x: self.x * m,
             y: self.y * m,
@@ -57,7 +58,7 @@ impl<'a, T: Float> Vector<T> {
 
     // in ruby, you can use ! to signal it's in-place - here we have to find another way
     #[inline(always)]
-    fn mulf(&'a mut self, m: T) -> &'a mut Vector<T> {
+    pub fn mulf(&'a mut self, m: T) -> &'a mut Vector<T> {
         self.x = self.x * m;
         self.y = self.y * m;
         self.z = self.z * m;
@@ -67,33 +68,34 @@ impl<'a, T: Float> Vector<T> {
     // The dot product - should we keep going and use  &ref type as self ?
     // Or just keep copying self around as in sub, add, mul ?
     #[inline(always)]
-    fn dot(&self, r: &Vector<T>) -> T {
+    pub fn dot(&self, r: &Vector<T>) -> T {
         self.x * r.x + self.y * r.y + self.z * r.z
     }
 
     #[inline(always)]
-    fn len(&self) -> T {
+    pub fn len(&self) -> T {
         self.dot(self).sqrt()
     }
 
     #[allow(unstable)]
     #[inline(always)]
-    fn normalize(&'a mut self) -> &'a mut Vector<T> {
+    pub fn normalize(&'a mut self) -> &'a mut Vector<T> {
         let len = self.len();
-        self.mulf(<T as Float>::one() / len)
+        self.mulf(len.recip())
     }
 
     #[allow(unstable)]
     #[inline(always)]
-    fn normalized(&self) -> Vector<T> {
-        self.mulfed(<T as Float>::one() / self.len())
+    pub fn normalized(&self) -> Vector<T> {
+        self.mulfed(self.len().recip())
     }
 }
 
 
 #[cfg(test)]
-mod tests {
+mod vec_test {
     extern crate test;
+    use std::default::Default;
     use super::*;
 
     #[test]
@@ -133,6 +135,13 @@ mod tests {
 
         v.mulf(2.0);
         assert_eq!(v.x, v32.x * 3.0 * 2.0);
+    }
+
+    #[test]
+    fn default() {
+        let v1: Vector<f32> = Default::default();
+        let v2 = <Vector<f32> as Default>::default();
+        assert_eq!(v1, v2);
     }
 
     #[test]

@@ -94,10 +94,9 @@ type Sphere struct {
 type Hit struct {
 	distance float32
 	pos      Vec3
-	sphere   *Sphere
 }
 
-var hitinfinity Hit = Hit{infinity, Vec3{0, 0, 0}, nil}
+var hitinfinity Hit = Hit{infinity, Vec3{0, 0, 0}}
 
 type Ray struct {
 	orig, dir Vec3
@@ -132,7 +131,7 @@ func (s *Sphere) Intersect(h *Hit, r *Ray) *Hit {
 	if lambda >= h.distance {
 		return h
 	}
-	return &Hit{lambda, normalize(vec3add(r.orig, vec3sub(vec3mulf(r.dir, lambda), s.center))), s}
+	return &Hit{lambda, normalize(vec3add(r.orig, vec3sub(vec3mulf(r.dir, lambda), s.center)))}
 }
 
 func (s *Sphere) Print() {
