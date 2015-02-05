@@ -2,7 +2,6 @@
 //! floating point precision.
 
 use std::num::Float;
-use std::default::Default;
 use std::ops::{Add, Sub, Mul};
 
 #[derive(Debug, PartialEq, Eq, Copy, Default)]
@@ -77,14 +76,12 @@ impl<'a, T: Float> Vector<T> {
         self.dot(self).sqrt()
     }
 
-    #[allow(unstable)]
     #[inline(always)]
     pub fn normalize(&'a mut self) -> &'a mut Vector<T> {
         let len = self.len();
         self.mulf(len.recip())
     }
 
-    #[allow(unstable)]
     #[inline(always)]
     pub fn normalized(&self) -> Vector<T> {
         self.mulfed(self.len().recip())

@@ -1,10 +1,11 @@
 /// Implements a group of intersectable items
 
-use std::num::Float;
+use std::num::{Float, NumCast};
 use super::vec::Vector;
 use std::default::Default;
 use std::fmt::Debug;
-use super::primitive::{DistanceMeasure, Intersectable, Intersection, Hit, Ray, Sphere};
+use std::iter::range_step_inclusive;
+use super::primitive::{DistanceMeasure, Intersectable, Intersection, Ray, Sphere};
 
 #[derive(Debug)]
 pub enum Pair<I, G> {
@@ -22,36 +23,50 @@ pub struct TypedGroup<T, B, I> {
     pub children: Vec<TypedGroupPair<T, B, I>>,
 }
 
-
-// Separating the generator will work, but will also make everything so much more complicated !
-// Can be done as an excersise later, once there is an image to render and to review
-// fn generate_pyramidal_positions<T, F>(l: u32, p: &Vector<T>, r: T, f: F)
-//     where T: Float, F: Fn(u32, T, Vector<T>) {
-//     f(l, r, p)
-//     if level == 1 {
-//         return
-//     }
-//     let i: 0us;
-
-
 // }
 
 /// It's interesting that 'type' is indeed a new type, and not a type-def ! At least 
 /// when used in this situation !!!
 impl<T> SphericalGroup<T>
-    where T: Float + Default + Debug {
+    where T: Float + Default + Debug + NumCast {
 
-    // fn pyramid_recursive(level: u32, origin: &Vector<T>, radius: T) -> TypedGroupPair<T, B, I> {
-    //     let g: TypedGroup<T, B, I> = Default::default();
-    // }
+    fn pyramid_recursive(level: u32, p: &Vector<T>, r: f64)
+        -> TypedGroupPair<T, Sphere<T>, Sphere<T>> {
+        let s = Sphere {
+            center: *p,
+            radius: <T as NumCast>::from(r).unwrap(),
+        };
+        if level == 1 {
+            return Pair::Item(s);
+        }
+
+        let mut g: SphericalGroup<T> = Default::default();
+        g.children.reserve(5);
+        g.children.push(Pair::Item(s));
+        g.bound.center = *p;
+        g.bound.radius = <T as NumCast>::from(3.0 * r).unwrap();
+
+        let rn = 3.0 * r / 12.0.sqrt();
+        for dz in range_step_inclusive(-1i32, 1, 2) {
+            for dx in range_step_inclusive(-1i32, 1, 2) {
+                let rnt = <T as NumCast>::from(rn).unwrap();
+                let np = *p + Vector { x: <T as NumCast>::from(dx).unwrap() * rnt,
+                                       y: rnt, 
+                                       z: <T as NumCast>::from(dz).unwrap() * rnt };
+                g.children.push(SphericalGroup::pyramid_recursive(level-1, &np, r * 0.5));
+            }
+        }
+        Pair::Group(g)
+    }
 
     pub fn pyramid(level: u32, origin: &Vector<T>, radius: T) -> SphericalGroup<T> {
-        let g: SphericalGroup<T> = Default::default();
-        g
+        assert!(level > 1, "Levels equal or smaller than one cause empty groups");
+        let radius_f64 = <f64 as NumCast>::from(radius).unwrap();
+        match SphericalGroup::pyramid_recursive(level, origin, radius_f64) {
+            Pair::Group(g) => g,
+            _ => unreachable!(),
+        }
     }
-    // pub fn pyramid() {
-
-    // }
 }
 
 impl<T, B, I> Intersectable<T> for TypedGroup<T, B, I> 
@@ -141,22 +156,11 @@ mod tests {
 
     #[test]
     fn pyramid() {
-        // let g = SphericalGroup::<f32> {bound: Default::default(), children: Default::default()};
-        // For some reason, this doesn't resolve the name
         let g = SphericalGroup::<f32>::pyramid(8, &Vector { x: 1.0f32, 
                                                             y: -1.0f32, 
                                                             z: 0.0f32 }, 1.0);
-        // let g: SphericalGroup<f32> = TypedGroup::pyramid(8, &Vector { x: 1.0f32, 
-        //                                                              y: -1.0f32, 
-        //                                                              z: 0.0f32 }, 1.0);
-        // This also works, of course, but is less readable !
-        // let g = TypedGroup::<f32, Sphere<f32>, Sphere<f32>>::pyramid(8, &Vector { x: 1.0f32, 
-        //                                                                          y: -1.0f32, 
-        //                                                                          z: 0.0f32 }, 
-        //                                                                          1.0);
 
-        assert!(g.children.len() > 0);
-
+        assert_eq!(g.children.len(), 5);
     }
 
     const ITERATIONS: usize = 10000;
@@ -173,5 +177,4 @@ mod tests {
         });
         b.bytes += (ITERATIONS * 3us) as u64;
     }
-
 }
