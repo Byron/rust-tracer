@@ -1,4 +1,6 @@
 
 mod tests;
 mod vec;
-mod scene;
+mod primitive;
+mod group;
+

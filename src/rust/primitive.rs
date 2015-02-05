@@ -2,28 +2,38 @@
 //! to help shooting rays to check for intersections
 
 use super::vec::Vector;
-
 use std::num::Float;
+use std::default::Default;
 
 
 #[derive(Debug, Default, PartialEq, Copy)]
 pub struct Ray<T: Float> {
-    pos: Vector<T>,
-    dir: Vector<T>
+    pub pos: Vector<T>,
+    pub dir: Vector<T>
 }
 
 #[derive(Debug)]
 pub struct Hit<T: Float> {
-    distance: T,
-    pos: Vector<T>,
+    pub distance: T,
+    pub pos: Vector<T>,
 }
 
+#[derive(Debug, Copy)]
 pub struct Sphere<T: Float> {
-    center: Vector<T>,
-    radius: T,
+    pub center: Vector<T>,
+    pub radius: T,
 }
 
-impl<T: Float> Sphere<T> {
+impl<T: Float + Default> Default for Sphere<T> {
+    fn default() -> Sphere<T> {
+        Sphere {
+            center: Default::default(),
+            radius: Float::one(),
+        }
+    }
+}
+
+impl<T: Float> DistanceMeasure<T> for Sphere<T> {
     fn distance_from_ray(&self, r: &Ray<T>) -> T {
         let v = self.center - r.pos;
         let b = v.dot(&r.dir);
@@ -47,7 +57,7 @@ impl<T: Float> Sphere<T> {
 impl<T: Float> Intersectable<T> for Sphere<T> {
     fn intersect(&self, max_distance: T, ray: &Ray<T>) -> Intersection<T> {
         let distance = self.distance_from_ray(ray);
-        if distance > max_distance {
+        if distance >= max_distance {
             return None;
         }
         Some(Hit { distance: distance, 
@@ -55,14 +65,16 @@ impl<T: Float> Intersectable<T> for Sphere<T> {
     }
 }
 
-type Intersection<T: Float> = Option<Hit<T>>;
+pub type Intersection<T> = Option<Hit<T>>;
 
 pub trait Intersectable<T> {
-    /// Abort intersection 
+    /// Return intersection point of ray with item (relative to the Ray !!)
     fn intersect(&self, max_distance: T, ray: &Ray<T>) -> Intersection<T>;
 }
 
-
+pub trait DistanceMeasure<T> {
+    fn distance_from_ray(&self, r: &Ray<T>) -> T;
+}
 
 
 #[cfg(test)]
@@ -81,7 +93,7 @@ mod primitive_tests {
 }
 
 #[cfg(test)]
-mod sphere_tests {
+mod sphere {
     extern crate test;
 
     use super::*;
@@ -129,6 +141,12 @@ mod sphere_tests {
             assert!(s.intersect(0.5, &r1).is_none(), "Max Distance too short");
             assert!(s.intersect(10.0, &r2).is_none(), "r2 is shot the wrong way");
         }
+    }
+
+    #[test]
+    fn defaultdefault() {
+        let s: Sphere<f32> = Default::default();
+        assert!(s.radius != 0.0);
     }
 
     const NUM_ITERATIONS: usize = 10000;

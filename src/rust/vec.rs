@@ -93,7 +93,7 @@ impl<'a, T: Float> Vector<T> {
 
 
 #[cfg(test)]
-mod vec_test {
+mod tests {
     extern crate test;
     use std::default::Default;
     use super::*;
