@@ -5,7 +5,7 @@ use super::vec::Vector;
 use std::default::Default;
 use std::fmt::Debug;
 use std::iter::range_step_inclusive;
-use super::primitive::{DistanceMeasure, Intersectable, Intersection, Ray, Sphere};
+use super::primitive::{DistanceMeasure, Intersectable, Intersection, Ray, Sphere, Hit};
 
 #[derive(Debug)]
 pub enum Pair<I, G> {
@@ -70,22 +70,28 @@ impl<T> SphericalGroup<T>
 }
 
 impl<T, B, I> Intersectable<T> for TypedGroup<T, B, I> 
-where T: Float, B: DistanceMeasure<T>, I: Intersectable<T> {
+where T: Float + Default, B: DistanceMeasure<T>, I: Intersectable<T> {
     fn intersect(&self, max_distance: T, ray: &Ray<T>) -> Intersection<T> {
-        if self.bound.distance_from_ray(&ray) == Float::infinity() {
+        if self.bound.distance_from_ray(&ray) >= max_distance {
             return None
         }
+
+        let mut closest_hit: Hit<T> = Hit { distance: Float::infinity(), 
+                                            pos: Default::default() };
         for item in self.children.iter() {
-            let h = match *item {
-                Pair::Item(ref v) => v.intersect(max_distance, &ray),
-                Pair::Group(ref g) => g.intersect(max_distance, &ray),
+            let ho = match *item {
+                Pair::Item(ref v) => v.intersect(closest_hit.distance, &ray),
+                Pair::Group(ref g) => g.intersect(closest_hit.distance, &ray),
             };
-            if h.is_some() {
-                return h;
+
+            // TODO: Can this be done more ideomatically, using option helpers ?
+            if let Some(ref hit) = ho {
+                if hit.distance < closest_hit.distance {
+                    closest_hit = *hit;
+                }
             }
         }
-
-        None
+        if closest_hit.distance < Float::infinity() { Some(closest_hit) } else { None }
     }
 }
 

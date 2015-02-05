@@ -12,7 +12,7 @@ pub struct Ray<T: Float> {
     pub dir: Vector<T>
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy)]
 pub struct Hit<T: Float> {
     pub distance: T,
     pub pos: Vector<T>,
