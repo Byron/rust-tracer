@@ -43,6 +43,8 @@ pub type SphericalGroup<T> = TypedGroup<T, Sphere<T>, Sphere<T>>;
 
 #[cfg(test)]
 mod tests {
+    extern crate test;
+
     use super::*;
     use super::super::primitive::Intersectable;
     use super::super::vec::Vector;
@@ -50,25 +52,25 @@ mod tests {
     use std::default::Default;
     use std::num::Float;
 
-    #[test]
-    fn intersect() {
+    fn setup_group<T: Float + Default>() -> (Ray<T>, Ray<T>, Ray<T>, SphericalGroup<T>) {
         let s1 = Sphere {center: Default::default(),
-                         radius: 1.0f32 };
-        let mut s2: Sphere<f32> = Default::default();
-        s2.center.z = s2.radius * 2.0;
+                         radius: Float::one() };
+        let mut s2: Sphere<T> = Default::default();
+        let one = <T as Float>::one();
+        s2.center.z = s2.radius * (one + one);
 
-        let mut g: SphericalGroup<f32> = Default::default();
+        let mut g: SphericalGroup<T> = Default::default();
         assert!(g.children.len() == 0);
 
         g.children.push(Pair::Item(s1));
         g.children.push(Pair::Item(s2));
-        g.bound.radius = 3.0; // Bigger than it needs to be !
+        g.bound.radius = one + one + one; // Bigger than it needs to be !
         let g = g;  // strip mut
 
         // ray for sphere 1
-        let mut r1: Ray<f32> = Default::default();
-        r1.pos.x = 2.0;
-        r1.dir.x = -1.0;
+        let mut r1: Ray<T> = Default::default();
+        r1.pos.x = one + one;
+        r1.dir.x = -one;
         let r1 = r1;
 
         // ray for sphere 2
@@ -81,6 +83,12 @@ mod tests {
         r3.dir.x = -r3.dir.x;
         let r3 = r3;
 
+        (r1, r2, r3, g)
+    }
+
+    #[test]
+    fn intersect() {
+        let (r1, r2, r3, g) = setup_group::<f32>();
 
         // Intersect Rays
         for ray in [&r1, &r2].iter() {
@@ -94,5 +102,20 @@ mod tests {
 
         assert!(g.intersect(Float::infinity(), &r3).is_none());
     }
-    
+
+    const ITERATIONS: usize = 10000;
+
+    #[bench]
+    fn bench_intersect(b: &mut test::Bencher) {
+        let (r1, r2, r3, g) = setup_group::<f32>();
+        b.iter(|| {
+            for _ in range(0, ITERATIONS) {
+                test::black_box(g.intersect(Float::infinity(), &r1));
+                test::black_box(g.intersect(Float::infinity(), &r2));
+                test::black_box(g.intersect(Float::infinity(), &r3));
+            }
+        });
+        b.bytes += (ITERATIONS * 3us) as u64;
+    }
+
 }
