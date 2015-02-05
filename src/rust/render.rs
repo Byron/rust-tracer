@@ -57,7 +57,7 @@ impl<T: Float + Default> Renderer<T> {
                 let p = r.pos + 
                             (r.dir.mulfed(h.distance)) + 
                             *h.pos.mulf(h.distance*<T as Float>::epsilon().sqrt());
-                            
+
                 if let Some(ref h) = s.group.intersect(
                                     Float::infinity(), 
                                     &Ray { pos: p,
@@ -130,15 +130,24 @@ impl<T: Float + Debug> PixelWriter<T> for PPMStdoutPixelWriter {
 
     fn write_next_pixel(&mut self, c: &Vector<T>) {
         let one: T = Float::one();
-        let two55 = (one+one).powi(8) - one; // 255
+        let scale = |v| -> u8 {
+            let two55 = (one+one).powi(8) - one; // 255
+            let op5 = one / (one+one);
+
+            let mut r = op5 + two55 * v;
+            if r > two55 {
+                return (<u8 as NumCast>::from(two55)).unwrap();
+            }
+            <u8 as NumCast>::from(r).unwrap()
+        };
 
         if self.rgb {
-            self.out.write_u8(<u8 as NumCast>::from(two55 * c.x).unwrap());
-            self.out.write_u8(<u8 as NumCast>::from(two55 * c.y).unwrap());
-            self.out.write_u8(<u8 as NumCast>::from(two55 * c.z).unwrap());
+            self.out.write_u8(scale(c.x));
+            self.out.write_u8(scale(c.y));
+            self.out.write_u8(scale(c.z));
         } else {
             let avg = (c.x + c.y + c.z) / (one+one+one);
-            self.out.write_u8(<u8 as NumCast>::from(two55 * avg).unwrap());
+            self.out.write_u8(scale(avg));
         }
     }
 }
@@ -152,6 +161,8 @@ mod tests {
     use super::super::vec::Vector;
     use super::super::group::SphericalGroup;
     use std::default::Default;
+    use std::num::Float;
+    use std::fmt::Debug;
 
     #[derive(Default)]
     struct DummyWriter {
@@ -159,11 +170,12 @@ mod tests {
         write_count: usize,
     }
 
-    impl<T> PixelWriter<T> for DummyWriter {
+    impl<T: Float + Debug> PixelWriter<T> for DummyWriter {
         fn begin(&mut self, x: u16, y: u16) {
             self.begin_called = true;
         }
-        fn write_next_pixel(&mut self, color: &Vector<T>) {
+        fn write_next_pixel(&mut self, c: &Vector<T>) {
+            let one: T = Float::one();
             self.write_count += 1;
         }
     }
