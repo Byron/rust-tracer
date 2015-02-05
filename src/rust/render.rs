@@ -3,7 +3,9 @@ use std::num::{Float, NumCast};
 use std::old_io;
 use std::old_io::stdio;
 use std::default::Default;
+use std::fmt::Debug;
 use super::vec::Vector;
+use super::group::SphericalGroup;
 use super::primitive::{Intersectable, Ray};
 
 pub trait PixelWriter<T> {
@@ -22,14 +24,32 @@ pub struct Renderer<T> {
     pub width: u16,
     pub height: u16,
     pub samples_per_pixel: u16,
+}
+
+pub struct Scene<T> {
+    pub group: SphericalGroup<T>,
+    pub omni_light_pos: Vector<T>,
     pub eye: Vector<T>,
-    pub light: Vector<T>,
+}
+
+impl<T: Float + Default + Debug> Default for Scene<T> {
+    fn default() -> Scene<T> {
+        let one: T = Float::one();
+        let zero: T = Float::zero();
+        Scene {
+            group: SphericalGroup::<T>::pyramid(8, &Vector { x: one, 
+                                                             y: -one, 
+                                                             z: zero }, one),
+            omni_light_pos: Vector { x: -one, y: -(one+one+one), z: (one+one) },
+            eye: Vector { x: zero, y: zero, z: -(one+one+one+one) }
+        }
+    }
 }
 
 impl<T: Float + Default> Renderer<T> {
 
-    fn raytrace(&self, s: &Intersectable<T>, r: &Ray<T>, c: &mut Vector<T>) {
-        let h = s.intersect(Float::infinity(), r);
+    fn raytrace(&self, s: &Scene<T>, r: &Ray<T>, c: &mut Vector<T>) {
+        let h = s.group.intersect(Float::infinity(), r);
         match h {
             Some(h) => {
                 c.x = c.x + Float::one();
@@ -42,13 +62,13 @@ impl<T: Float + Default> Renderer<T> {
 
     // Use runtime dispatching for the image writer to remain flexible
     // (And to test this ;))
-    pub fn render(&self, scene: &Intersectable<T>, writer: &mut PixelWriter<T>) {
+    pub fn render(&self, scene: &Scene<T>, writer: &mut PixelWriter<T>) {
         writer.begin(self.width, self.height);
         let ssf: T = NumCast::from(self.samples_per_pixel).unwrap();
         let wf: T = NumCast::from(self.width).unwrap();
         let hf: T = NumCast::from(self.height).unwrap();
 
-        let mut ray = Ray { pos: self.eye, 
+        let mut ray = Ray { pos: scene.eye, 
                             dir: Default::default() };
         let two = <T as Float>::one() + Float::one();
 
@@ -77,18 +97,18 @@ impl<T: Float + Default> Renderer<T> {
     }
 }
 
-struct PPMPixelWriter {
+pub struct PPMStdoutPixelWriter {
     out: old_io::LineBufferedWriter<stdio::StdWriter>,
     rgb: bool,
 }
 
-impl PPMPixelWriter {
-    pub fn new(write_RGB: bool) {
-        PPMPixelWriter { out: old_io::stdout(), rgb: write_RGB };
+impl PPMStdoutPixelWriter {
+    pub fn new(write_RGB: bool) -> PPMStdoutPixelWriter {
+        PPMStdoutPixelWriter { out: old_io::stdout(), rgb: write_RGB }
     }
 }
 
-impl<T: Float> PixelWriter<T> for PPMPixelWriter {
+impl<T: Float + Debug> PixelWriter<T> for PPMStdoutPixelWriter {
     fn begin(&mut self, x: u16, y: u16) {
         let mut ptype: &str = "P5";
         if self.rgb {
@@ -102,12 +122,13 @@ impl<T: Float> PixelWriter<T> for PPMPixelWriter {
     fn write_next_pixel(&mut self, c: &Vector<T>) {
         let one: T = Float::one();
         let two55 = (one+one).powi(8) - one; // 255
+
         if self.rgb {
             self.out.write_u8(<u8 as NumCast>::from(two55 * c.x).unwrap());
             self.out.write_u8(<u8 as NumCast>::from(two55 * c.y).unwrap());
             self.out.write_u8(<u8 as NumCast>::from(two55 * c.z).unwrap());
         } else {
-            let avg = c.x + c.y + c.z / (one+one+one);
+            let avg = (c.x + c.y + c.z) / (one+one+one);
             self.out.write_u8(<u8 as NumCast>::from(two55 * avg).unwrap());
         }
     }
@@ -116,6 +137,8 @@ impl<T: Float> PixelWriter<T> for PPMPixelWriter {
 
 #[cfg(test)]
 mod tests {
+    extern crate test;
+
     use super::*;
     use super::super::vec::Vector;
     use super::super::group::SphericalGroup;
@@ -136,24 +159,35 @@ mod tests {
         }
     }
 
+    const W: usize = 32;
+    const H: usize = 16;
+
     #[test]
     fn basic_rendering() {
-        const W: usize = 32;
-        const H: usize = 16;
+        let s: Scene<f32> = Default::default();
         let r = Renderer { width: W as u16,
                            height: H as u16,
-                           samples_per_pixel: 1,
-                           eye: Vector { x: 0.0f32, y: 0.0, z: -4.0 },
-                           light: Vector { x: -1.0f32, y: -3.0, z: 2.0 } };
-
-        let g = SphericalGroup::<f32>::pyramid(8, &Vector { x: 1.0f32, 
-                                                            y: -1.0f32, 
-                                                            z: 0.0f32 }, 1.0);
+                           samples_per_pixel: 2 };
 
         let mut dw: DummyWriter = Default::default();
-        r.render(&g, &mut dw);
+        r.render(&s, &mut dw);
 
         assert!(dw.begin_called);
         assert!(dw.write_count == W * H);
+    }
+
+    #[bench]
+    fn bench_rendering(b: &mut test::Bencher) {
+        const SPP: usize = 1;
+        let s: Scene<f32> = Default::default();
+        let r = Renderer { width: H as u16,
+                           height: H as u16,
+                           samples_per_pixel: SPP as u16 };
+
+        let mut dw: DummyWriter = Default::default();
+        b.iter(|| {
+            r.render(&s, &mut dw);
+        });
+        b.bytes += (H * H * SPP * SPP) as u64;
     }
 }

@@ -7,3 +7,5 @@ mod primitive;
 mod group;
 mod render;
 
+pub use render::{Scene, Renderer, PPMStdoutPixelWriter};
+
