@@ -49,14 +49,23 @@ impl<T: Float + Default + Debug> Default for Scene<T> {
 impl<T: Float + Default> Renderer<T> {
 
     fn raytrace(&self, s: &Scene<T>, r: &Ray<T>, c: &mut Vector<T>) {
-        let h = s.group.intersect(Float::infinity(), r);
-        match h {
-            Some(h) => {
-                c.x = c.x + Float::one();
-                c.y = c.y + Float::one();
-                c.z = c.z + Float::one();
-            }
-            _ => {}
+        if let Some(ref mut h) = s.group.intersect(Float::infinity(), r) {
+                let g: T = h.pos.dot(&s.omni_light_pos);
+                if g >= <T as Float>::zero() {
+                    return
+                }
+                let p = r.pos + 
+                            (r.dir.mulfed(h.distance)) + 
+                            *h.pos.mulf(h.distance*<T as Float>::epsilon().sqrt());
+                            
+                if let Some(ref h) = s.group.intersect(
+                                    Float::infinity(), 
+                                    &Ray { pos: p,
+                                           dir: s.omni_light_pos.mulfed(-<T as Float>::one())}) {
+                        c.x = c.x - g;
+                        c.y = c.y - g;
+                        c.z = c.z - g;
+                }
         }
     }
 
