@@ -360,16 +360,7 @@ func (ren *Renderer) renderRect(tint Vec3, r *Rect) {
 					var yres float32 = float32(y) + float32(ssy)/float32(ren.ss)
 
 					ren.cam.setRayDirForPixel(&ray, xres, yres)
-					if false {
-						// Draw a rectangle around the bounds of our rendering.
-						if y == r.t || y == r.b-1 || x == r.l || x == r.r-1 {
-							g = tint
-						} else {
-							g = vec3add(g, ren.scene.rayTrace(&ray))
-						}
-					} else {
-						g = vec3add(g, ren.scene.rayTrace(&ray))
-					}
+					g = vec3add(g, ren.scene.rayTrace(&ray))
 				} // END for each y subsample
 			} // END for each x subsample
 

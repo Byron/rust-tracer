@@ -6,22 +6,22 @@
 
 using namespace std;
 
-numeric_limits<double> real;
-double delta = sqrt(real.epsilon()), infinity = real.infinity();
+numeric_limits<float> real;
+float delta = sqrt(real.epsilon()), infinity = real.infinity();
 
 struct Vec {
-  double x, y, z;
-  Vec(double x2, double y2, double z2) : x(x2), y(y2), z(z2) {}
+  float x, y, z;
+  Vec(float x2, float y2, float z2) : x(x2), y(y2), z(z2) {}
 };
 Vec operator+(const Vec &a, const Vec &b)
 { return Vec(a.x+b.x, a.y+b.y, a.z+b.z); }
 Vec operator-(const Vec &a, const Vec &b)
 { return Vec(a.x-b.x, a.y-b.y, a.z-b.z); }
-Vec operator*(double a, const Vec &b) { return Vec(a*b.x, a*b.y, a*b.z); }
-double dot(const Vec &a, const Vec &b) { return a.x*b.x + a.y*b.y + a.z*b.z; }
+Vec operator*(float a, const Vec &b) { return Vec(a*b.x, a*b.y, a*b.z); }
+float dot(const Vec &a, const Vec &b) { return a.x*b.x + a.y*b.y + a.z*b.z; }
 Vec unitise(const Vec &a) { return (1 / sqrt(dot(a, a))) * a; }
 
-typedef pair<double, Vec> Hit;
+typedef pair<float, Vec> Hit;
 
 struct Ray {
   Vec orig, dir;
@@ -35,23 +35,23 @@ struct Scene {
 
 struct Sphere : public Scene {
   Vec center;
-  double radius;
+  float radius;
 
-  Sphere(Vec c, double r) : center(c), radius(r) {}
+  Sphere(Vec c, float r) : center(c), radius(r) {}
   ~Sphere() {}
 
-  double ray_sphere(const Ray &ray) const {
+  float ray_sphere(const Ray &ray) const {
     Vec v = center - ray.orig;
-    double b = dot(v, ray.dir), disc = b*b - dot(v, v) + radius * radius;
+    float b = dot(v, ray.dir), disc = b*b - dot(v, v) + radius * radius;
     if (disc < 0) return infinity;
-    double d = sqrt(disc), t2 = b + d;
+    float d = sqrt(disc), t2 = b + d;
     if (t2 < 0) return infinity;
-    double t1 = b - d;
+    float t1 = b - d;
     return (t1 > 0 ? t1 : t2);
   }
 
   Hit intersect(const Hit &hit, const Ray &ray) const {
-    double lambda = ray_sphere(ray);
+    float lambda = ray_sphere(ray);
     if (lambda >= hit.first) return hit;
     return Hit(lambda, unitise(ray.orig + lambda*ray.dir - center));
   }
@@ -70,7 +70,7 @@ struct Group : public Scene {
 
   Hit intersect(const Hit &hit, const Ray &ray) const {
     Hit hit2=hit;
-    double l = bound.ray_sphere(ray);
+    float l = bound.ray_sphere(ray);
     if (l >= hit.first) return hit;
     for (Scenes::const_iterator it=child.begin(); it!=child.end(); ++it)
       hit2 = (*it)->intersect(hit2, ray);
@@ -81,21 +81,21 @@ struct Group : public Scene {
 Hit intersect(const Ray &ray, const Scene &s)
 { return s.intersect(Hit(infinity, Vec(0, 0, 0)), ray); }
 
-double ray_trace(const Vec &light, const Ray &ray, const Scene &s) {
+float ray_trace(const Vec &light, const Ray &ray, const Scene &s) {
   Hit hit = intersect(ray, s);
   if (hit.first == infinity) return 0;
-  double g = dot(hit.second, light);
+  float g = dot(hit.second, light);
   if (g >= 0) return 0.;
   Vec p = ray.orig + hit.first*ray.dir + delta*hit.second;
   return (intersect(Ray(p, -1. * light), s).first < infinity ? 0 : -g);
 }
 
-Scene *create(int level, const Vec &c, double r) {
+Scene *create(int level, const Vec &c, float r) {
   Scene *s = new Sphere(c, r);
   if (level == 1) return s;
   Scenes child;
   child.push_back(s);
-  double rn = 3*r/sqrt(12.);
+  float rn = 3*r/sqrt(12.);
   for (int dz=-1; dz<=1; dz+=2)
     for (int dx=-1; dx<=1; dx+=2)
       child.push_back(create(level-1, c + rn*Vec(dx, 1, dz), r/2));
@@ -110,7 +110,7 @@ int main(int argc, char *argv[]) {
   cout << "P5\n" << n << " " << n << "\n255\n";
   for (int y=n-1; y>=0; --y)
     for (int x=0; x<n; ++x) {
-      double g=0;
+      float g=0;
       for (int dx=0; dx<ss; ++dx)
         for (int dy=0; dy<ss; ++dy) {
           Vec dir(unitise(Vec(x+dx*1./ss-n/2., y+dy*1./ss-n/2., n)));
