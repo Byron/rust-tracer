@@ -1,4 +1,4 @@
-#include <list>
+#include <vector>
 #include <iostream>
 #include <limits>
 #include <cmath>
@@ -57,7 +57,7 @@ struct Sphere : public Scene {
   }
 };
 
-typedef list<Scene *> Scenes;
+typedef vector<Scene *> Scenes;
 struct Group : public Scene {
   Sphere bound;
   Scenes child;
@@ -94,6 +94,7 @@ Scene *create(int level, const Vec &c, float r) {
   Scene *s = new Sphere(c, r);
   if (level == 1) return s;
   Scenes child;
+  child.reserve(5);
   child.push_back(s);
   float rn = 3*r/sqrt(12.);
   for (int dz=-1; dz<=1; dz+=2)
