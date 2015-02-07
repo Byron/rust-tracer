@@ -76,7 +76,7 @@ where T: Float + Default, B: DistanceMeasure<T>, I: Intersectable<T> {
             return None
         }
 
-        let mut closest_hit: Hit<T> = Hit { distance: Float::infinity(), 
+        let mut closest_hit: Hit<T> = Hit { distance: max_distance, 
                                             pos: Default::default() };
         for item in self.children.iter() {
             let ho = match *item {
@@ -91,7 +91,7 @@ where T: Float + Default, B: DistanceMeasure<T>, I: Intersectable<T> {
                 }
             }
         }
-        if closest_hit.distance < Float::infinity() { Some(closest_hit) } else { None }
+        if closest_hit.distance < max_distance { Some(closest_hit) } else { None }
     }
 }
 

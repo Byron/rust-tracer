@@ -61,7 +61,7 @@ impl<T: Float> Intersectable<T> for Sphere<T> {
             return None;
         }
         Some(Hit { distance: distance, 
-                   pos: (ray.pos + ray.dir.mulfed(distance) - self.center).normalized() })
+                   pos: (ray.pos + (ray.dir.mulfed(distance) - self.center)).normalized() })
     }
 }
 

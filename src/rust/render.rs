@@ -28,7 +28,7 @@ pub struct Renderer<T> {
 
 pub struct Scene<T> {
     pub group: SphericalGroup<T>,
-    pub omni_light_pos: Vector<T>,
+    pub directional_light: Vector<T>,
     pub eye: Vector<T>,
 }
 
@@ -37,10 +37,10 @@ impl<T: Float + Default + Debug> Default for Scene<T> {
         let one: T = Float::one();
         let zero: T = Float::zero();
         Scene {
-            group: SphericalGroup::<T>::pyramid(8, &Vector { x: one, 
+            group: SphericalGroup::<T>::pyramid(8, &Vector { x: zero, 
                                                              y: -one, 
                                                              z: zero }, one),
-            omni_light_pos: Vector { x: -one, y: -(one+one+one), z: (one+one) },
+            directional_light: Vector { x: -one, y: -(one+one+one), z: (one+one) }.normalized(),
             eye: Vector { x: zero, y: zero, z: -(one+one+one+one) }
         }
     }
@@ -50,22 +50,23 @@ impl<T: Float + Default> Renderer<T> {
 
     fn raytrace(&self, s: &Scene<T>, r: &Ray<T>, c: &mut Vector<T>) {
         if let Some(ref mut h) = s.group.intersect(Float::infinity(), r) {
-                let g: T = h.pos.dot(&s.omni_light_pos);
-                if g >= <T as Float>::zero() {
-                    return
-                }
-                let p = r.pos + 
-                            (r.dir.mulfed(h.distance)) + 
-                            *h.pos.mulf(h.distance*<T as Float>::epsilon().sqrt());
+            let g: T = h.pos.dot(&s.directional_light);
+            if g >= <T as Float>::zero() {
+                return
+            }
+            let p = r.pos + 
+                        (r.dir.mulfed(h.distance)) + 
+                        *h.pos.mulf(h.distance*<T as Float>::epsilon().sqrt());
 
-                if let Some(ref h) = s.group.intersect(
-                                    Float::infinity(), 
-                                    &Ray { pos: p,
-                                           dir: s.omni_light_pos.mulfed(-<T as Float>::one())}) {
-                        c.x = c.x - g;
-                        c.y = c.y - g;
-                        c.z = c.z - g;
-                }
+            // if there is something between us and the light, we are in shadow
+            if let None = s.group.intersect(
+                                Float::infinity(),
+                                &Ray { pos: p,
+                                       dir: s.directional_light.mulfed(-<T as Float>::one())}) {
+                c.x = c.x - g;
+                c.y = c.y - g;
+                c.z = c.z - g;
+            }
         }
     }
 
