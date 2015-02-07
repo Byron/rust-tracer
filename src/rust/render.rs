@@ -5,6 +5,8 @@ use std::old_io::stdio;
 use std::ops::Drop;
 use std::default::Default;
 use std::iter::range_step;
+use std::sync::mpsc::sync_channel;
+use std::sync::TaskPool;
 use super::vec::{Vector, RFloat};
 use super::group::SphericalGroup;
 use super::primitive::{Intersectable, Ray, Hit};
@@ -22,11 +24,11 @@ pub trait RGBABufferWriter {
 }
 
 
-#[derive(Copy)]
 pub struct Renderer {
-    pub width: u16,
-    pub height: u16,
-    pub samples_per_pixel: u16,
+    width: u16,
+    height: u16,
+    samples_per_pixel: u16,
+    pool: TaskPool,
 }
 
 #[derive(Copy, PartialEq)]
@@ -151,7 +153,19 @@ impl Default for Scene {
 
 impl Renderer {
 
-    fn raytrace(&self, s: &Scene, r: &Ray, c: &mut Vector) -> RFloat {
+    fn new(width: u16, height: u16, samples_per_pixel: u16, max_procs: usize) -> Renderer {
+        assert!(max_procs > 0, "max_procs must be 0 at least");
+
+        Renderer {
+            width: width,
+            height: height,
+            samples_per_pixel: samples_per_pixel,
+            pool: TaskPool::new(max_procs),
+        }
+    }
+
+    #[inline]
+    fn raytrace(s: &Scene, r: &Ray, c: &mut Vector) -> RFloat {
         let mut h = Hit::missed();
         s.group.intersect(&mut h, r);
         if h.has_missed() {
@@ -180,16 +194,11 @@ impl Renderer {
         0.0
     }
 
-    // Use runtime dispatching for the image writer to remain flexible
-    // (And to test this ;))
-    pub fn render(&self, scene: &Scene, writer: &mut RGBABufferWriter) {
-        writer.begin(self.width, self.height);
-        let ssf = self.samples_per_pixel as RFloat;
+    // Render region is inherently single-threaded
+    pub fn render_region(samples_per_pixel: u16, width: RFloat, height: RFloat, 
+                         scene: &Scene, buf: &mut RGBABuffer) {
+        let ssf = samples_per_pixel as RFloat;
         let total_samples_per_pixel_recip = (ssf * ssf).recip();
-        let wf = self.width as RFloat;
-        let hf = self.height as RFloat;
-
-        let mut buf = RGBABuffer::new(&ImageRegion {l: 0, b: 0, t: self.height, r: self.width });
         let region = *buf.region();
 
         let mut ray = Ray { pos: scene.eye, 
@@ -200,15 +209,15 @@ impl Renderer {
                 let mut g: Vector = Default::default();
                 let mut alpha: RFloat = 0.0;
 
-                for ssx in range(0, self.samples_per_pixel) {
-                    for ssy in range(0, self.samples_per_pixel) {
+                for ssx in range(0, samples_per_pixel) {
+                    for ssy in range(0, samples_per_pixel) {
                         let xres = x as RFloat + ssx as RFloat / ssf;
                         let yres = y as RFloat + ssy as RFloat / ssf;
-                        ray.dir.x = xres - wf / 2.0;
-                        ray.dir.y = yres - hf / 2.0;
-                        ray.dir.z = wf;
+                        ray.dir.x = xres - width / 2.0;
+                        ray.dir.y = yres - height / 2.0;
+                        ray.dir.z = width;
                         ray.dir.normalize();
-                        alpha += self.raytrace(scene, &ray, &mut g);
+                        alpha += Renderer::raytrace(scene, &ray, &mut g);
 
                     }//for each ss y
                 }// for each ss x
@@ -219,9 +228,41 @@ impl Renderer {
                 buf.set_pixel_from_vector(x, region.t - (y + 1), &g, alpha);
             }// for each x
         }// for each y
+    }
 
-        // Finally, write the buffer
-        writer.write_rgba_buffer(&buf);
+    // Use runtime dispatching for the image writer to remain flexible
+    // (And to test this ;))
+    // sets up multi-threading accordingly
+    pub fn render(&self, scene: &Scene, writer: &mut RGBABufferWriter) {
+        const CHUNK_SIZE: u16 = 64;
+        assert!(self.width % CHUNK_SIZE == 0, "TODO: handle chunk sizes");
+        assert!(self.height % CHUNK_SIZE == 0, "TODO: handle chunk sizes");
+
+        writer.begin(self.width, self.height);
+
+        // Push all tasks
+        let (tx, rx) = sync_channel::<RGBABuffer>(4);
+
+        for y in range_step(0u16, self.height, CHUNK_SIZE)  {
+            for x in range_step(0u16, self.width, CHUNK_SIZE) {
+
+                let tx = tx.clone();
+                let ss = self.samples_per_pixel;
+                let w = self.width as RFloat;
+                let h = self.height as RFloat;
+                self.pool.execute(move|| {
+                    let b = RGBABuffer::new(&ImageRegion { l: x, r: x + CHUNK_SIZE, 
+                                                           b: y, t: y + CHUNK_SIZE });
+                    Renderer::render_region(ss, w, h, scene, &mut b);
+                    tx.send(b).ok();
+                });
+            }
+        }
+
+        // Read the results and pass them to the writer
+        for b in rx.iter() {
+            writer.write_rgba_buffer(&b);
+        }
     }
 }
 
@@ -306,9 +347,7 @@ mod tests {
     #[test]
     fn basic_rendering() {
         let s: Scene = Default::default();
-        let r = Renderer { width: W as u16,
-                           height: H as u16,
-                           samples_per_pixel: 2 };
+        let r = Renderer::new(W as u16, H as u16, 2, 1);
 
         let mut dw: DummyWriter = Default::default();
         r.render(&s, &mut dw);
@@ -334,9 +373,7 @@ mod tests {
     fn bench_rendering(b: &mut test::Bencher) {
         const SPP: usize = 1;
         let s: Scene = Default::default();
-        let r = Renderer { width: H as u16,
-                           height: H as u16,
-                           samples_per_pixel: SPP as u16 };
+        let r = Renderer::new(H as u16, H as u16, SPP as u16, 4);
 
         let mut dw: DummyWriter = Default::default();
         b.iter(|| {
