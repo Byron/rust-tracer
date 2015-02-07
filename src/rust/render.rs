@@ -3,12 +3,11 @@ use std::num::{Float, NumCast};
 use std::old_io;
 use std::old_io::stdio;
 use std::default::Default;
-use std::fmt::Debug;
-use super::vec::Vector;
+use super::vec::{Vector, RFloat};
 use super::group::SphericalGroup;
 use super::primitive::{Intersectable, Ray};
 
-pub trait PixelWriter<T> {
+pub trait PixelWriter {
     /// To be called before writing the first pixel
     /// x and y are the max image resolution
     fn begin(&mut self, x: u16, y: u16);
@@ -16,53 +15,51 @@ pub trait PixelWriter<T> {
     /// Write one line after another, when x is width, skip to next line
     /// This must be assured by the caller
     /// Color range is 0.0 to 1.0, everything higher leads to overflows
-    fn write_next_pixel(&mut self, color: &Vector<T>);
+    fn write_next_pixel(&mut self, color: &Vector);
 }
 
 
-pub struct Renderer<T> {
+pub struct Renderer {
     pub width: u16,
     pub height: u16,
     pub samples_per_pixel: u16,
 }
 
-pub struct Scene<T> {
-    pub group: SphericalGroup<T>,
-    pub directional_light: Vector<T>,
-    pub eye: Vector<T>,
+pub struct Scene {
+    pub group: SphericalGroup,
+    pub directional_light: Vector,
+    pub eye: Vector,
 }
 
-impl<T: Float + Default + Debug> Default for Scene<T> {
-    fn default() -> Scene<T> {
-        let one: T = Float::one();
-        let zero: T = Float::zero();
+impl Default for Scene {
+    fn default() -> Scene {
         Scene {
-            group: SphericalGroup::<T>::pyramid(8, &Vector { x: zero, 
-                                                             y: -one, 
-                                                             z: zero }, one),
-            directional_light: Vector { x: -one, y: -(one+one+one), z: (one+one) }.normalized(),
-            eye: Vector { x: zero, y: zero, z: -(one+one+one+one) }
+            group: SphericalGroup::pyramid(8, &Vector { x: 0.0, 
+                                                        y: -1.0, 
+                                                        z: 0.0 }, 1.0),
+            directional_light: Vector { x: -1.0, y: -3.0, z: 2.0 }.normalized(),
+            eye: Vector { x: 0.0, y: 0.0, z: -4.0 }
         }
     }
 }
 
-impl<T: Float + Default> Renderer<T> {
+impl Renderer {
 
-    fn raytrace(&self, s: &Scene<T>, r: &Ray<T>, c: &mut Vector<T>) {
+    fn raytrace(&self, s: &Scene, r: &Ray, c: &mut Vector) {
         if let Some(ref mut h) = s.group.intersect(Float::infinity(), r) {
-            let g: T = h.pos.dot(&s.directional_light);
-            if g >= <T as Float>::zero() {
+            let g = h.pos.dot(&s.directional_light);
+            if g >= 0.0 {
                 return
             }
             let p = r.pos + 
                         (r.dir.mulfed(h.distance)) + 
-                        *h.pos.mulf(h.distance*<T as Float>::epsilon().sqrt());
+                        *h.pos.mulf(h.distance * <RFloat as Float>::epsilon().sqrt());
 
             // if there is something between us and the light, we are in shadow
             if let None = s.group.intersect(
                                 Float::infinity(),
                                 &Ray { pos: p,
-                                       dir: s.directional_light.mulfed(-<T as Float>::one())}) {
+                                       dir: s.directional_light.mulfed(-1.0) }) {
                 c.x = c.x - g;
                 c.y = c.y - g;
                 c.z = c.z - g;
@@ -72,28 +69,25 @@ impl<T: Float + Default> Renderer<T> {
 
     // Use runtime dispatching for the image writer to remain flexible
     // (And to test this ;))
-    pub fn render(&self, scene: &Scene<T>, writer: &mut PixelWriter<T>) {
+    pub fn render(&self, scene: &Scene, writer: &mut PixelWriter) {
         writer.begin(self.width, self.height);
-        let ssf: T = NumCast::from(self.samples_per_pixel).unwrap();
-        let wf: T = NumCast::from(self.width).unwrap();
-        let hf: T = NumCast::from(self.height).unwrap();
+        let ssf = self.samples_per_pixel as RFloat;
+        let wf = self.width as RFloat;
+        let hf = self.height as RFloat;
 
         let mut ray = Ray { pos: scene.eye, 
                             dir: Default::default() };
-        let two = <T as Float>::one() + Float::one();
 
         for y in range(0, self.height) {
             for x in range(0, self.width) {
-                let mut g: Vector<T> = Default::default();
+                let mut g: Vector = Default::default();
 
                 for ssx in range(0, self.samples_per_pixel) {
                     for ssy in range(0, self.samples_per_pixel) {
-                        let xres = <T as NumCast>::from(x).unwrap() + 
-                                   <T as NumCast>::from(ssx).unwrap() / ssf;
-                        let yres = <T as NumCast>::from(y).unwrap() + 
-                                   <T as NumCast>::from(ssy).unwrap() / ssf;
-                        ray.dir.x = xres - wf / two;
-                        ray.dir.y = yres - hf / two;
+                        let xres = x as RFloat + ssx as RFloat / ssf;
+                        let yres = y as RFloat + ssy as RFloat / ssf;
+                        ray.dir.x = xres - wf / 2.0;
+                        ray.dir.y = yres - hf / 2.0;
                         ray.dir.z = wf;
                         ray.dir.normalize();
                         self.raytrace(scene, &ray, &mut g);
@@ -118,7 +112,7 @@ impl PPMStdoutPixelWriter {
     }
 }
 
-impl<T: Float + Debug> PixelWriter<T> for PPMStdoutPixelWriter {
+impl PixelWriter for PPMStdoutPixelWriter {
     fn begin(&mut self, x: u16, y: u16) {
         let mut ptype: &str = "P5";
         if self.rgb {
@@ -129,17 +123,14 @@ impl<T: Float + Debug> PixelWriter<T> for PPMStdoutPixelWriter {
         self.out.write_line("255");
     }
 
-    fn write_next_pixel(&mut self, c: &Vector<T>) {
-        let one: T = Float::one();
+    fn write_next_pixel(&mut self, c: &Vector) {
         let scale = |v| -> u8 {
-            let two55 = (one+one).powi(8) - one; // 255
-            let op5 = one / (one+one);
 
-            let mut r = op5 + two55 * v;
-            if r > two55 {
-                return (<u8 as NumCast>::from(two55)).unwrap();
+            let mut r = 0.5 + 255.0 * v;
+            if r > 255.0 {
+                return 255;
             }
-            <u8 as NumCast>::from(r).unwrap()
+            r as u8
         };
 
         if self.rgb {
@@ -147,7 +138,7 @@ impl<T: Float + Debug> PixelWriter<T> for PPMStdoutPixelWriter {
             self.out.write_u8(scale(c.y));
             self.out.write_u8(scale(c.z));
         } else {
-            let avg = (c.x + c.y + c.z) / (one+one+one);
+            let avg = (c.x + c.y + c.z) / 3.0;
             self.out.write_u8(scale(avg));
         }
     }
@@ -159,11 +150,10 @@ mod tests {
     extern crate test;
 
     use super::*;
-    use super::super::vec::Vector;
+    use super::super::vec::{Vector, RFloat};
     use super::super::group::SphericalGroup;
     use std::default::Default;
     use std::num::Float;
-    use std::fmt::Debug;
 
     #[derive(Default)]
     struct DummyWriter {
@@ -171,12 +161,11 @@ mod tests {
         write_count: usize,
     }
 
-    impl<T: Float + Debug> PixelWriter<T> for DummyWriter {
+    impl PixelWriter for DummyWriter {
         fn begin(&mut self, x: u16, y: u16) {
             self.begin_called = true;
         }
-        fn write_next_pixel(&mut self, c: &Vector<T>) {
-            let one: T = Float::one();
+        fn write_next_pixel(&mut self, c: &Vector) {
             self.write_count += 1;
         }
     }
@@ -186,7 +175,7 @@ mod tests {
 
     #[test]
     fn basic_rendering() {
-        let s: Scene<f32> = Default::default();
+        let s: Scene = Default::default();
         let r = Renderer { width: W as u16,
                            height: H as u16,
                            samples_per_pixel: 2 };
@@ -201,7 +190,7 @@ mod tests {
     #[bench]
     fn bench_rendering(b: &mut test::Bencher) {
         const SPP: usize = 1;
-        let s: Scene<f32> = Default::default();
+        let s: Scene = Default::default();
         let r = Renderer { width: H as u16,
                            height: H as u16,
                            samples_per_pixel: SPP as u16 };

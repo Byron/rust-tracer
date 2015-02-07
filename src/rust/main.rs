@@ -5,7 +5,7 @@ use std::default::Default;
 use std::os;
 
 fn main() {
-    let s: Scene<f32> = Default::default();
+    let s: Scene = Default::default();
     let r = Renderer { width: 1024,
                        height: 1024,
                        samples_per_pixel: 1 };

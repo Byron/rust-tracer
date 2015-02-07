@@ -1,61 +1,61 @@
 //! Allows to setup a scene with scenes in pyramidal layout, along with traits 
 //! to help shooting rays to check for intersections
 
-use super::vec::Vector;
+use super::vec::{Vector, RFloat};
 use std::num::Float;
 use std::default::Default;
 
 
-#[derive(Debug, Default, PartialEq, Copy)]
-pub struct Ray<T: Float> {
-    pub pos: Vector<T>,
-    pub dir: Vector<T>
+#[derive(Default, PartialEq, Copy)]
+pub struct Ray {
+    pub pos: Vector,
+    pub dir: Vector
 }
 
-#[derive(Debug, Copy)]
-pub struct Hit<T: Float> {
-    pub distance: T,
-    pub pos: Vector<T>,
+#[derive(Copy)]
+pub struct Hit {
+    pub distance: RFloat,
+    pub pos: Vector,
 }
 
-#[derive(Debug, Copy)]
-pub struct Sphere<T: Float> {
-    pub center: Vector<T>,
-    pub radius: T,
+#[derive(Copy)]
+pub struct Sphere {
+    pub center: Vector,
+    pub radius: RFloat,
 }
 
-impl<T: Float + Default> Default for Sphere<T> {
-    fn default() -> Sphere<T> {
+impl Default for Sphere {
+    fn default() -> Sphere {
         Sphere {
             center: Default::default(),
-            radius: Float::one(),
+            radius: 1.0,
         }
     }
 }
 
-impl<T: Float> DistanceMeasure<T> for Sphere<T> {
-    fn distance_from_ray(&self, r: &Ray<T>) -> T {
+impl DistanceMeasure for Sphere {
+    fn distance_from_ray(&self, r: &Ray) -> RFloat {
         let v = self.center - r.pos;
         let b = v.dot(&r.dir);
         let disc = b * b - v.dot(&v) + self.radius * self.radius;
 
-        if disc < Float::zero() {
+        if disc < 0.0 {
             return Float::infinity();
         }
 
         let d = disc.sqrt();
         let t2 = b + d;
-        if t2 < Float::zero() {
+        if t2 < 0.0 {
             return Float::infinity();
         }
 
         let t1 = b - d;
-        if t1 > Float::zero() { t1 } else { t2 }
+        if t1 > 0.0 { t1 } else { t2 }
     }
 }
 
-impl<T: Float> Intersectable<T> for Sphere<T> {
-    fn intersect(&self, max_distance: T, ray: &Ray<T>) -> Intersection<T> {
+impl Intersectable for Sphere {
+    fn intersect(&self, max_distance: RFloat, ray: &Ray) -> Intersection {
         let distance = self.distance_from_ray(ray);
         if distance >= max_distance {
             return None;
@@ -65,15 +65,15 @@ impl<T: Float> Intersectable<T> for Sphere<T> {
     }
 }
 
-pub type Intersection<T> = Option<Hit<T>>;
+pub type Intersection = Option<Hit>;
 
-pub trait Intersectable<T> {
+pub trait Intersectable {
     /// Return intersection point of ray with item (relative to the Ray !!)
-    fn intersect(&self, max_distance: T, ray: &Ray<T>) -> Intersection<T>;
+    fn intersect(&self, max_distance: RFloat, ray: &Ray) -> Intersection;
 }
 
-pub trait DistanceMeasure<T> {
-    fn distance_from_ray(&self, r: &Ray<T>) -> T;
+pub trait DistanceMeasure {
+    fn distance_from_ray(&self, r: &Ray) -> RFloat;
 }
 
 
@@ -102,16 +102,15 @@ mod sphere {
     use super::super::vec::Vector;
     
 
-    fn setup_scene<T: Float + Default>() -> (Ray<T>, Ray<T>, Sphere<T>) {
-        let s: Sphere<T> = Sphere { center: Default::default(),
-                                    radius: Float::one() };
+    fn setup_scene() -> (Ray, Ray, Sphere) {
+        let s = Sphere { center: Default::default(),
+                                 radius: 1.0 };
 
-        let mut dir: Vector<T> = Default::default();
-        // dir.x = -Float::one();  // Inference doesn't really work it appears
-        dir.x = -<T as Float>::one();
-        let r1: Ray<T> = Ray { pos: Vector { x: <T as Float>::one() + <T as Float>::one(), 
-                                             y: <T as Float>::zero(), 
-                                             z: <T as Float>::zero() },
+        let mut dir: Vector = Default::default();
+        dir.x = -1.0;
+        let r1 = Ray { pos: Vector { x: 2.0, 
+                                     y: 0.0, 
+                                     z: 0.0 },
                                dir: dir};
         let mut r2 = r1;
         r2.dir.x = -r2.dir.x;   // invert direction
@@ -120,7 +119,7 @@ mod sphere {
 
     #[test]
     fn intersect() {
-        let (r1, r2, s) = setup_scene::<f32>();
+        let (r1, r2, s) = setup_scene();
 
         {
             let dfr = s.distance_from_ray(&r1);
@@ -165,7 +164,7 @@ mod sphere {
 
     #[bench]
     fn bench_intersect(b: &mut test::Bencher) {
-        let (r1, r2, s) = setup_scene::<f32>();
+        let (r1, r2, s) = setup_scene();
         b.iter(|| {
             for _ in range(0, NUM_ITERATIONS) {
                 test::black_box(s.intersect(Float::infinity(), &r1));
