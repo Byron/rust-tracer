@@ -3,13 +3,15 @@ use std::num::Float;
 use std::old_io;
 use std::old_io::stdio;
 use std::ops::Drop;
+use std::env;
+use std::sync::TaskPool;
 use std::default::Default;
 use std::iter::range_step;
 use std::sync::mpsc::sync_channel;
-use std::sync::TaskPool;
 use super::vec::{Vector, RFloat};
 use super::group::SphericalGroup;
 use super::primitive::{Intersectable, Ray, Hit};
+
 
 pub trait RGBABufferWriter {
     /// To be called before writing the first pixel
@@ -25,10 +27,9 @@ pub trait RGBABufferWriter {
 
 
 pub struct Renderer {
-    width: u16,
-    height: u16,
-    samples_per_pixel: u16,
-    pool: TaskPool,
+    pub width: u16,
+    pub height: u16,
+    pub samples_per_pixel: u16,
 }
 
 #[derive(Copy, PartialEq)]
@@ -153,17 +154,6 @@ impl Default for Scene {
 
 impl Renderer {
 
-    fn new(width: u16, height: u16, samples_per_pixel: u16, max_procs: usize) -> Renderer {
-        assert!(max_procs > 0, "max_procs must be 0 at least");
-
-        Renderer {
-            width: width,
-            height: height,
-            samples_per_pixel: samples_per_pixel,
-            pool: TaskPool::new(max_procs),
-        }
-    }
-
     #[inline]
     fn raytrace(s: &Scene, r: &Ray, c: &mut Vector) -> RFloat {
         let mut h = Hit::missed();
@@ -233,7 +223,7 @@ impl Renderer {
     // Use runtime dispatching for the image writer to remain flexible
     // (And to test this ;))
     // sets up multi-threading accordingly
-    pub fn render(&self, scene: &Scene, writer: &mut RGBABufferWriter) {
+    pub fn render(&self, scene: &Scene, writer: &mut RGBABufferWriter, pool: &TaskPool) {
         const CHUNK_SIZE: u16 = 64;
         assert!(self.width % CHUNK_SIZE == 0, "TODO: handle chunk sizes");
         assert!(self.height % CHUNK_SIZE == 0, "TODO: handle chunk sizes");
@@ -242,7 +232,7 @@ impl Renderer {
 
         // Push all tasks
         let (tx, rx) = sync_channel::<RGBABuffer>(4);
-
+        let mut count = 0us;
         for y in range_step(0u16, self.height, CHUNK_SIZE)  {
             for x in range_step(0u16, self.width, CHUNK_SIZE) {
 
@@ -250,10 +240,13 @@ impl Renderer {
                 let ss = self.samples_per_pixel;
                 let w = self.width as RFloat;
                 let h = self.height as RFloat;
-                self.pool.execute(move|| {
+                count += 1;
+                pool.execute(move|| {
                     let b = RGBABuffer::new(&ImageRegion { l: x, r: x + CHUNK_SIZE, 
                                                            b: y, t: y + CHUNK_SIZE });
-                    Renderer::render_region(ss, w, h, scene, &mut b);
+                    // If this is commented in, we get lifetime errors, probably due to 
+                    // ... scene ?
+                    // Renderer::render_region(ss, w, h, scene, &mut b);
                     tx.send(b).ok();
                 });
             }
@@ -262,6 +255,10 @@ impl Renderer {
         // Read the results and pass them to the writer
         for b in rx.iter() {
             writer.write_rgba_buffer(&b);
+            count -= 1;
+            if count == 0 {
+                break;
+            }
         }
     }
 }
@@ -324,6 +321,7 @@ mod tests {
 
     use super::*;
     use super::super::vec::Vector;
+    use std::sync::TaskPool;
     use std::default::Default;
 
     #[derive(Default)]
@@ -341,16 +339,17 @@ mod tests {
         }
     }
 
-    const W: usize = 32;
-    const H: usize = 16;
+    const W: usize = 64;
+    const H: usize = 128;
 
     #[test]
     fn basic_rendering() {
         let s: Scene = Default::default();
-        let r = Renderer::new(W as u16, H as u16, 2, 1);
+        let pool = TaskPool::new(1);
+        let r = Renderer { width: W as u16, height: H as u16, samples_per_pixel: 2 };
 
         let mut dw: DummyWriter = Default::default();
-        r.render(&s, &mut dw);
+        r.render(&s, &mut dw, &pool);
 
         assert!(dw.begin_called);
         assert!(dw.write_count == 1);
@@ -372,12 +371,13 @@ mod tests {
     #[bench]
     fn bench_rendering(b: &mut test::Bencher) {
         const SPP: usize = 1;
+        let pool = TaskPool::new(4);
         let s: Scene = Default::default();
-        let r = Renderer::new(H as u16, H as u16, SPP as u16, 4);
+        let r = Renderer { width: H as u16, height: H as u16, samples_per_pixel: SPP as u16 };
 
         let mut dw: DummyWriter = Default::default();
         b.iter(|| {
-            r.render(&s, &mut dw);
+            r.render(&s, &mut dw, &pool);
         });
         b.bytes += (H * H * SPP * SPP) as u64;
     }
