@@ -187,11 +187,13 @@ impl Renderer {
     }
 
     // Render region is inherently single-threaded
-    pub fn render_region(samples_per_pixel: u16, width: RFloat, height: RFloat, 
-                         scene: &Scene, buf: &mut RGBABuffer) {
-        let ssf = samples_per_pixel as RFloat;
+    pub fn render_region(o: &RenderOptions, scene: &Scene, buf: &mut RGBABuffer) {
+        let ssf = o.samples_per_pixel as RFloat;
         let total_samples_per_pixel_recip = (ssf * ssf).recip();
         let region = *buf.region();
+
+        let width = o.width as RFloat;
+        let height = o.height as RFloat;
 
         let mut ray = Ray { pos: scene.eye, 
                             dir: Default::default() };
@@ -201,8 +203,8 @@ impl Renderer {
                 let mut g: Vector = Default::default();
                 let mut alpha: RFloat = 0.0;
 
-                for ssx in range(0, samples_per_pixel) {
-                    for ssy in range(0, samples_per_pixel) {
+                for ssx in range(0, o.samples_per_pixel) {
+                    for ssy in range(0, o.samples_per_pixel) {
                         let xres = x as RFloat + ssx as RFloat / ssf;
                         let yres = y as RFloat + ssy as RFloat / ssf;
                         ray.dir.x = xres - width / 2.0;
@@ -240,17 +242,16 @@ impl Renderer {
             for x in range_step(0u16, o.width, CHUNK_SIZE) {
 
                 let tx = tx.clone();
-                let ss = o.samples_per_pixel;
-                let w = o.width as RFloat;
-                let h = o.height as RFloat;
+                let opts = *o;
                 let tscene = scene.clone();
+
                 count += 1;
 
                 pool.execute(move|| {
                     let mut b = RGBABuffer::new(&ImageRegion { l: x, r: x + CHUNK_SIZE, 
                                                            b: y, t: y + CHUNK_SIZE });
 
-                    Renderer::render_region(ss, w, h, tscene.deref(), &mut b);
+                    Renderer::render_region(&opts, tscene.deref(), &mut b);
 
                     tx.send(b).ok();
                 });
@@ -277,7 +278,6 @@ pub struct PPMStdoutRGBABufferWriter {
 impl Drop for PPMStdoutRGBABufferWriter {
     fn drop(&mut self) {
         // We always write our entire buffer - it will just be zero initially
-        // That way, we can see the buckets being written in preview :) ... .
         // Can't write entire buffer :( thanks to alpha channel
         let buf = self.image.as_ref().unwrap().buffer();
         for po in range_step(0, buf.len(), RGBABuffer::components()) {
