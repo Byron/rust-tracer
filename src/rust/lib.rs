@@ -1,4 +1,4 @@
-#![feature(std_misc,core,io,collections)]
+#![feature(std_misc,core,io,collections,std_misc)]
 #![feature(test)]
 
 mod tests;

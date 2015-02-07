@@ -90,7 +90,6 @@ mod tests {
     use super::super::vec::Vector;
     use super::super::primitive::{Sphere, Ray, Hit};
     use std::default::Default;
-    use std::num::Float;
 
     fn setup_group() -> (Ray, Ray, Ray, SphericalGroup) {
         let s1 = Sphere {center: Default::default(),

@@ -2,9 +2,8 @@
 use std::num::Float;
 use std::old_io;
 use std::old_io::stdio;
-use std::ops::Drop;
-use std::env;
-use std::sync::TaskPool;
+use std::ops::{Drop, Deref};
+use std::sync::{TaskPool, Arc};
 use std::default::Default;
 use std::iter::range_step;
 use std::sync::mpsc::sync_channel;
@@ -226,7 +225,7 @@ impl Renderer {
     // Use runtime dispatching for the image writer to remain flexible
     // (And to test this ;))
     // sets up multi-threading accordingly
-    pub fn render(o: &RenderOptions, scene: &Scene, writer: &mut RGBABufferWriter, 
+    pub fn render(o: &RenderOptions, scene: Arc<Scene>, writer: &mut RGBABufferWriter, 
                   pool: &TaskPool) {
         const CHUNK_SIZE: u16 = 64;
         assert!(o.width % CHUNK_SIZE == 0, "TODO: handle chunk sizes");
@@ -244,13 +243,15 @@ impl Renderer {
                 let ss = o.samples_per_pixel;
                 let w = o.width as RFloat;
                 let h = o.height as RFloat;
+                let tscene = scene.clone();
                 count += 1;
+
                 pool.execute(move|| {
-                    let b = RGBABuffer::new(&ImageRegion { l: x, r: x + CHUNK_SIZE, 
+                    let mut b = RGBABuffer::new(&ImageRegion { l: x, r: x + CHUNK_SIZE, 
                                                            b: y, t: y + CHUNK_SIZE });
-                    // If this is commented in, we get lifetime errors, probably due to 
-                    // ... scene ?
-                    Renderer::render_region(ss, w, h, scene, &mut b);
+
+                    Renderer::render_region(ss, w, h, tscene.deref(), &mut b);
+
                     tx.send(b).ok();
                 });
             }
@@ -283,7 +284,7 @@ impl Drop for PPMStdoutRGBABufferWriter {
             let b = &buf[po .. po + 3];
 
             if self.rgb {
-                self.out.write(b).unwrap();
+                self.out.write_all(b).unwrap();
             } else {
                 let avg = ((b[0] as f32 + b[1] as f32 + b[2] as f32) / 3.0f32) as u8;
                 self.out.write_u8(avg).unwrap();
@@ -324,8 +325,7 @@ mod tests {
     extern crate test;
 
     use super::*;
-    use super::super::vec::Vector;
-    use std::sync::TaskPool;
+    use std::sync::{TaskPool, Arc};
     use std::default::Default;
 
     #[derive(Default)]
@@ -348,12 +348,12 @@ mod tests {
 
     #[test]
     fn basic_rendering() {
-        let s: Scene = Default::default();
+        let s: Arc<Scene> = Arc::new(Default::default());
         let pool = TaskPool::new(1);
         let options = RenderOptions { width: W as u16, height: H as u16, samples_per_pixel: 2 };
 
         let mut dw: DummyWriter = Default::default();
-        Renderer::render(&options, &s, &mut dw, &pool);
+        Renderer::render(&options, s.clone(), &mut dw, &pool);
 
         assert!(dw.begin_called);
         assert!(dw.write_count == 1);
@@ -376,12 +376,12 @@ mod tests {
     fn bench_rendering(b: &mut test::Bencher) {
         const SPP: usize = 1;
         let pool = TaskPool::new(4);
-        let s: Scene = Default::default();
+        let s: Arc<Scene> = Arc::new(Default::default());
         let options = RenderOptions { width: H as u16, height: H as u16, samples_per_pixel: SPP as u16 };
 
         let mut dw: DummyWriter = Default::default();
         b.iter(|| {
-            Renderer::render(&options, &s, &mut dw, &pool);
+            Renderer::render(&options, s.clone(), &mut dw, &pool);
         });
         b.bytes += (H * H * SPP * SPP) as u64;
     }
