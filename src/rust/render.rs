@@ -206,7 +206,7 @@ impl Renderer {
                         let xres = x as RFloat + ssx as RFloat / ssf;
                         let yres = y as RFloat + ssy as RFloat / ssf;
                         ray.dir.x = xres - width / 2.0;
-                        ray.dir.y = yres - height / 2.0;
+                        ray.dir.y = (height - yres) - height / 2.0;
                         ray.dir.z = width;
                         ray.dir.normalize();
                         alpha += Renderer::raytrace(scene, &ray, &mut g);
@@ -217,7 +217,7 @@ impl Renderer {
                 g.mulf(total_samples_per_pixel_recip);
                 alpha *= total_samples_per_pixel_recip;
 
-                buf.set_pixel_from_vector(x, region.t - (y + 1), &g, alpha);
+                buf.set_pixel_from_vector(x, y, &g, alpha);
             }// for each x
         }// for each y
     }
@@ -356,7 +356,7 @@ mod tests {
         Renderer::render(&options, s.clone(), &mut dw, &pool);
 
         assert!(dw.begin_called);
-        assert!(dw.write_count == 1);
+        assert_eq!(dw.write_count, 2);
     }
 
     #[test]

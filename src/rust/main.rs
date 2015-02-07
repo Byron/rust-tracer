@@ -9,7 +9,7 @@ use std::sync::{TaskPool, Arc};
 #[allow(dead_code)]
 fn main() {
     let s: Arc<Scene> = Arc::new(Default::default());
-    let pool: TaskPool  = TaskPool::new(env::var_string("RTRACE_MAX_PROCS")
+    let pool: TaskPool  = TaskPool::new(env::var_string("RTRACEMAXPROCS")
                                                            .ok()
                                                            .unwrap_or("1".to_string())
                                                            .parse::<usize>().ok()
