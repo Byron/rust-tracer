@@ -1,7 +1,7 @@
 #![feature(env)]
 extern crate tracer;
 
-use tracer::{Scene, Renderer, PPMStdoutPixelWriter};
+use tracer::{Scene, Renderer, PPMStdoutRGBABufferWriter};
 use std::default::Default;
 use std::env;
 
@@ -12,6 +12,6 @@ fn main() {
                        height: 1024,
                        samples_per_pixel: 1 };
 
-    r.render(&s, &mut PPMStdoutPixelWriter::new(false));
+    r.render(&s, &mut PPMStdoutRGBABufferWriter::new(false));
     env::set_exit_status(0);
 }

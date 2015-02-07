@@ -70,7 +70,7 @@ impl<B, I> Intersectable for TypedGroup<B, I> where B: DistanceMeasure, I: Inter
         }
 
         for item in self.children.iter() {
-            let ho = match *item {
+            match *item {
                 Pair::Item(ref v) => v.intersect(hit, &ray),
                 Pair::Group(ref g) => g.intersect(hit, &ray),
             };
@@ -88,7 +88,7 @@ mod tests {
     use super::*;
     use super::super::primitive::Intersectable;
     use super::super::vec::Vector;
-    use super::super::primitive::{Sphere, Ray};
+    use super::super::primitive::{Sphere, Ray, Hit};
     use std::default::Default;
     use std::num::Float;
 

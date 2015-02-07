@@ -152,9 +152,11 @@ mod sphere {
             assert_eq!(h.pos.x, 1.0);
 
             h.distance = 0.5;
-            assert!(s.intersect(&mut h, &r1).is_none(), "Max Distance too short");
+            s.intersect(&mut h, &r1);
+            assert!(h.distance == 0.5, "Max Distance too short");
             h.distance = 10.0;
-            assert!(s.intersect(&mut h, &r2).is_none(), "r2 is shot the wrong way");
+            s.intersect(&mut h, &r2);
+            assert!(h.distance == 10.0, "r2 is shot the wrong way");
         }
     }
 
@@ -180,7 +182,7 @@ mod sphere {
 
     #[bench]
     fn bench_intersect(b: &mut test::Bencher) {
-        let (r1, _, s) = setup_scene();
+        let (r1, r2, s) = setup_scene();
         let mut h = Hit::missed();
         b.iter(|| {
             for _ in range(0, NUM_ITERATIONS) {
