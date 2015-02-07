@@ -6,7 +6,7 @@ use std::ops::{Add, Sub, Mul};
 
 pub type RFloat = f32;
 
-#[derive(PartialEq, Copy, Default)]
+#[derive(PartialEq, Copy, Default, Debug)]
 pub struct Vector {
     pub x: RFloat,
     pub y: RFloat,
@@ -136,8 +136,8 @@ mod tests {
 
     #[test]
     fn default() {
-        let v1: Vector<f32> = Default::default();
-        let v2 = <Vector<f32> as Default>::default();
+        let v1: Vector = Default::default();
+        let v2 = <Vector as Default>::default();
         assert_eq!(v1, v2);
     }
 

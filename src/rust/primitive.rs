@@ -6,7 +6,7 @@ use std::num::Float;
 use std::default::Default;
 
 
-#[derive(Default, PartialEq, Copy)]
+#[derive(Default, PartialEq, Copy, Debug)]
 pub struct Ray {
     pub pos: Vector,
     pub dir: Vector
@@ -84,10 +84,10 @@ mod primitive_tests {
 
     #[test]
     fn ray_defaults() {
-        let r1: Ray<f32> = Ray {pos: Default::default(),
+        let r1: Ray = Ray {pos: Default::default(),
                                 dir: Default::default() };
 
-        let r2: Ray<f32> = Default::default();
+        let r2: Ray = Default::default();
         assert_eq!(r1, r2);
     }
 }
@@ -144,7 +144,7 @@ mod sphere {
 
     #[test]
     fn defaultdefault() {
-        let s: Sphere<f32> = Default::default();
+        let s: Sphere = Default::default();
         assert!(s.radius != 0.0);
     }
 
@@ -152,7 +152,7 @@ mod sphere {
 
     #[bench]
     fn bench_ray_sphere(b: &mut test::Bencher) {
-        let (r1, r2, s) = setup_scene::<f32>();
+        let (r1, r2, s) = setup_scene();
         b.iter(|| {
             for _ in range(0, NUM_ITERATIONS) {
                 test::black_box(s.distance_from_ray(&r1));
@@ -164,7 +164,7 @@ mod sphere {
 
     #[bench]
     fn bench_intersect(b: &mut test::Bencher) {
-        let (r1, r2, s) = setup_scene();
+        let (r1, _, s) = setup_scene();
         b.iter(|| {
             for _ in range(0, NUM_ITERATIONS) {
                 test::black_box(s.intersect(Float::infinity(), &r1));

@@ -1,6 +1,6 @@
 /// Implements a group of intersectable items
 
-use std::num::{Float, NumCast};
+use std::num::Float;
 use super::vec::{Vector, RFloat};
 use std::default::Default;
 use std::iter::range_step_inclusive;
@@ -98,7 +98,7 @@ mod tests {
 
     use super::*;
     use super::super::primitive::Intersectable;
-    use super::super::vec::{Vector, RFloat};
+    use super::super::vec::Vector;
     use super::super::primitive::{Sphere, Ray};
     use std::default::Default;
     use std::num::Float;

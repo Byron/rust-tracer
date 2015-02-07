@@ -1,5 +1,5 @@
 /// Implements the actual raytracer which produces the final image
-use std::num::{Float, NumCast};
+use std::num::Float;
 use std::old_io;
 use std::old_io::stdio;
 use std::default::Default;
@@ -19,6 +19,7 @@ pub trait PixelWriter {
 }
 
 
+#[derive(Copy)]
 pub struct Renderer {
     pub width: u16,
     pub height: u16,
@@ -107,8 +108,8 @@ pub struct PPMStdoutPixelWriter {
 }
 
 impl PPMStdoutPixelWriter {
-    pub fn new(write_RGB: bool) -> PPMStdoutPixelWriter {
-        PPMStdoutPixelWriter { out: old_io::stdout(), rgb: write_RGB }
+    pub fn new(write_rgb: bool) -> PPMStdoutPixelWriter {
+        PPMStdoutPixelWriter { out: old_io::stdout(), rgb: write_rgb }
     }
 }
 
@@ -118,15 +119,15 @@ impl PixelWriter for PPMStdoutPixelWriter {
         if self.rgb {
             ptype = "P6"
         }
-        self.out.write_line(ptype);
-        self.out.write_line(&format!("{} {}", x, y)[]);
-        self.out.write_line("255");
+        self.out.write_line(ptype).unwrap();
+        self.out.write_line(&format!("{} {}", x, y)[]).unwrap();
+        self.out.write_line("255").unwrap();
     }
 
     fn write_next_pixel(&mut self, c: &Vector) {
         let scale = |v| -> u8 {
 
-            let mut r = 0.5 + 255.0 * v;
+            let r = 0.5 + 255.0 * v;
             if r > 255.0 {
                 return 255;
             }
@@ -134,12 +135,12 @@ impl PixelWriter for PPMStdoutPixelWriter {
         };
 
         if self.rgb {
-            self.out.write_u8(scale(c.x));
-            self.out.write_u8(scale(c.y));
-            self.out.write_u8(scale(c.z));
+            self.out.write_u8(scale(c.x)).unwrap();
+            self.out.write_u8(scale(c.y)).unwrap();
+            self.out.write_u8(scale(c.z)).unwrap();
         } else {
             let avg = (c.x + c.y + c.z) / 3.0;
-            self.out.write_u8(scale(avg));
+            self.out.write_u8(scale(avg)).unwrap();
         }
     }
 }
@@ -150,10 +151,8 @@ mod tests {
     extern crate test;
 
     use super::*;
-    use super::super::vec::{Vector, RFloat};
-    use super::super::group::SphericalGroup;
+    use super::super::vec::Vector;
     use std::default::Default;
-    use std::num::Float;
 
     #[derive(Default)]
     struct DummyWriter {
@@ -162,10 +161,10 @@ mod tests {
     }
 
     impl PixelWriter for DummyWriter {
-        fn begin(&mut self, x: u16, y: u16) {
+        fn begin(&mut self, _: u16, _: u16) {
             self.begin_called = true;
         }
-        fn write_next_pixel(&mut self, c: &Vector) {
+        fn write_next_pixel(&mut self, _: &Vector) {
             self.write_count += 1;
         }
     }
