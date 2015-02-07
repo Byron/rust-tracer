@@ -18,6 +18,23 @@ pub struct Hit {
     pub pos: Vector,
 }
 
+impl Hit {
+    pub fn missed() -> Hit {
+        Hit {
+            distance: Float::infinity(),
+            pos: Default::default(),
+        }
+    }
+
+    pub fn has_missed(&self) -> bool {
+        self.distance == Float::infinity()
+    }
+
+    pub fn set_missed(&mut self) {
+        self.distance = Float::infinity();
+    }
+}
+
 #[derive(Copy)]
 pub struct Sphere {
     pub center: Vector,
@@ -34,6 +51,7 @@ impl Default for Sphere {
 }
 
 impl DistanceMeasure for Sphere {
+    #[inline(always)]
     fn distance_from_ray(&self, r: &Ray) -> RFloat {
         let v = self.center - r.pos;
         let b = v.dot(&r.dir);
@@ -55,21 +73,20 @@ impl DistanceMeasure for Sphere {
 }
 
 impl Intersectable for Sphere {
-    fn intersect(&self, max_distance: RFloat, ray: &Ray) -> Intersection {
+    #[inline(always)]
+    fn intersect(&self, hit: &mut Hit, ray: &Ray) {
         let distance = self.distance_from_ray(ray);
-        if distance >= max_distance {
-            return None;
+        if distance >= hit.distance {
+            return;
         }
-        Some(Hit { distance: distance, 
-                   pos: (ray.pos + (ray.dir.mulfed(distance) - self.center)).normalized() })
+        hit.distance = distance;
+        hit.pos = (ray.pos + (ray.dir.mulfed(distance) - self.center)).normalized();
     }
 }
 
-pub type Intersection = Option<Hit>;
-
 pub trait Intersectable {
     /// Return intersection point of ray with item (relative to the Ray !!)
-    fn intersect(&self, max_distance: RFloat, ray: &Ray) -> Intersection;
+    fn intersect(&self, &mut Hit, ray: &Ray);
 }
 
 pub trait DistanceMeasure {
@@ -129,16 +146,15 @@ mod sphere {
         }
 
         { 
-            match s.intersect(2.0, &r1) {
-                Some(Hit { distance: d, pos: p }) => {
-                    assert_eq!(d, 1.0);
-                    assert_eq!(p.x, 1.0);
-                }
-                None => unreachable!(),
-            }
+            let mut h = Hit { distance: 2.0, pos: Default::default() };
+            s.intersect(&mut h, &r1);
+            assert_eq!(h.distance, 1.0);
+            assert_eq!(h.pos.x, 1.0);
 
-            assert!(s.intersect(0.5, &r1).is_none(), "Max Distance too short");
-            assert!(s.intersect(10.0, &r2).is_none(), "r2 is shot the wrong way");
+            h.distance = 0.5;
+            assert!(s.intersect(&mut h, &r1).is_none(), "Max Distance too short");
+            h.distance = 10.0;
+            assert!(s.intersect(&mut h, &r2).is_none(), "r2 is shot the wrong way");
         }
     }
 
@@ -165,10 +181,13 @@ mod sphere {
     #[bench]
     fn bench_intersect(b: &mut test::Bencher) {
         let (r1, _, s) = setup_scene();
+        let mut h = Hit::missed();
         b.iter(|| {
             for _ in range(0, NUM_ITERATIONS) {
-                test::black_box(s.intersect(Float::infinity(), &r1));
-                test::black_box(s.intersect(Float::infinity(), &r1));
+                h.set_missed();
+                test::black_box(s.intersect(&mut h, &r1));
+                h.set_missed();
+                test::black_box(s.intersect(&mut h, &r2));
             }
         });
         b.bytes += (NUM_ITERATIONS * 2) as u64;

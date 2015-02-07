@@ -5,7 +5,7 @@ use std::old_io::stdio;
 use std::default::Default;
 use super::vec::{Vector, RFloat};
 use super::group::SphericalGroup;
-use super::primitive::{Intersectable, Ray};
+use super::primitive::{Intersectable, Ray, Hit};
 
 pub trait PixelWriter {
     /// To be called before writing the first pixel
@@ -47,7 +47,9 @@ impl Default for Scene {
 impl Renderer {
 
     fn raytrace(&self, s: &Scene, r: &Ray, c: &mut Vector) {
-        if let Some(ref mut h) = s.group.intersect(Float::infinity(), r) {
+        let mut h = Hit::missed();
+        s.group.intersect(&mut h, r);
+        if !h.has_missed() {
             let g = h.pos.dot(&s.directional_light);
             if g >= 0.0 {
                 return
@@ -57,10 +59,11 @@ impl Renderer {
                         *h.pos.mulf(h.distance * <RFloat as Float>::epsilon().sqrt());
 
             // if there is something between us and the light, we are in shadow
-            if let None = s.group.intersect(
-                                Float::infinity(),
-                                &Ray { pos: p,
-                                       dir: s.directional_light.mulfed(-1.0) }) {
+            h.set_missed();
+            s.group.intersect(&mut h,
+                              &Ray { pos: p,
+                                      dir: s.directional_light.mulfed(-1.0) });
+            if h.has_missed() {
                 c.x = c.x - g;
                 c.y = c.y - g;
                 c.z = c.z - g;

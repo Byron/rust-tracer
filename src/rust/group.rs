@@ -4,7 +4,7 @@ use std::num::Float;
 use super::vec::{Vector, RFloat};
 use std::default::Default;
 use std::iter::range_step_inclusive;
-use super::primitive::{DistanceMeasure, Intersectable, Intersection, Ray, Sphere, Hit};
+use super::primitive::{DistanceMeasure, Intersectable, Ray, Sphere, Hit};
 
 pub enum Pair<I, G> {
     Item(I),
@@ -64,28 +64,17 @@ impl SphericalGroup {
 }
 
 impl<B, I> Intersectable for TypedGroup<B, I> where B: DistanceMeasure, I: Intersectable {
-    fn intersect(&self, max_distance: RFloat, ray: &Ray) -> Intersection {
-        if self.bound.distance_from_ray(&ray) >= max_distance {
-            return None
+    fn intersect(&self, hit: &mut Hit, ray: &Ray){
+        if self.bound.distance_from_ray(&ray) >= hit.distance {
+            return
         }
-
-        let mut closest_hit = Hit { distance: max_distance, 
-                                    pos: Default::default() };
 
         for item in self.children.iter() {
             let ho = match *item {
-                Pair::Item(ref v) => v.intersect(closest_hit.distance, &ray),
-                Pair::Group(ref g) => g.intersect(closest_hit.distance, &ray),
+                Pair::Item(ref v) => v.intersect(hit, &ray),
+                Pair::Group(ref g) => g.intersect(hit, &ray),
             };
-
-            // TODO: Can this be done more ideomatically, using option helpers ?
-            if let Some(ref hit) = ho {
-                if hit.distance < closest_hit.distance {
-                    closest_hit = *hit;
-                }
-            }
         }
-        if closest_hit.distance < max_distance { Some(closest_hit) } else { None }
     }
 }
 
@@ -142,15 +131,17 @@ mod tests {
 
         // Intersect Rays
         for ray in [&r1, &r2].iter() {
-            let ho = g.intersect(Float::infinity(), &ray);
-            assert!(!ho.is_none());
-            let h = ho.unwrap();
+            let mut h = Hit::missed();
+            g.intersect(&mut h, &ray);
+            assert!(!h.has_missed());
             assert_eq!(h.distance, 1.0);
             assert_eq!(h.pos.x, 1.0);
             assert_eq!(h.pos.z, 0.0);
         }
 
-        assert!(g.intersect(Float::infinity(), &r3).is_none());
+        let mut h = Hit::missed();
+        g.intersect(&mut h, &r3);
+        assert!(h.has_missed());
     }
 
     #[test]
@@ -167,11 +158,15 @@ mod tests {
     #[bench]
     fn bench_intersect(b: &mut test::Bencher) {
         let (r1, r2, r3, g) = setup_group();
+        let mut h = Hit::missed();
         b.iter(|| {
             for _ in range(0, ITERATIONS) {
-                test::black_box(g.intersect(Float::infinity(), &r1));
-                test::black_box(g.intersect(Float::infinity(), &r2));
-                test::black_box(g.intersect(Float::infinity(), &r3));
+                test::black_box(g.intersect(&mut h, &r1));
+                h.set_missed();
+                test::black_box(g.intersect(&mut h, &r2));
+                h.set_missed();
+                test::black_box(g.intersect(&mut h, &r3));
+                h.set_missed();
             }
         });
         b.bytes += (ITERATIONS * 3us) as u64;
