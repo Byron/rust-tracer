@@ -30,7 +30,7 @@ struct Ray {
 
 struct Scene {
   virtual ~Scene() {};
-  virtual Hit intersect(const Hit &, const Ray &) const = 0;
+  virtual void intersect(Hit &, const Ray &) const = 0;
 };
 
 struct Sphere : public Scene {
@@ -40,6 +40,7 @@ struct Sphere : public Scene {
   Sphere(Vec c, float r) : center(c), radius(r) {}
   ~Sphere() {}
 
+  inline
   float ray_sphere(const Ray &ray) const {
     Vec v = center - ray.orig;
     float b = dot(v, ray.dir), disc = b*b - dot(v, v) + radius * radius;
@@ -50,10 +51,11 @@ struct Sphere : public Scene {
     return (t1 > 0 ? t1 : t2);
   }
 
-  Hit intersect(const Hit &hit, const Ray &ray) const {
+  void intersect(Hit &hit, const Ray &ray) const {
     float lambda = ray_sphere(ray);
-    if (lambda >= hit.first) return hit;
-    return Hit(lambda, unitise(ray.orig + lambda*ray.dir - center));
+    if (lambda >= hit.first) return;
+    hit.first = lambda;
+    hit.second = unitise(ray.orig + lambda*ray.dir - center);
   }
 };
 
@@ -68,26 +70,29 @@ struct Group : public Scene {
       delete *it;
   }
 
-  Hit intersect(const Hit &hit, const Ray &ray) const {
-    Hit hit2=hit;
+  void intersect(Hit &hit, const Ray &ray) const {
     float l = bound.ray_sphere(ray);
-    if (l >= hit.first) return hit;
-    for (Scenes::const_iterator it=child.begin(); it!=child.end(); ++it)
-      hit2 = (*it)->intersect(hit2, ray);
-    return hit2;
+    if (l >= hit.first) return;
+    for (Scenes::const_iterator it=child.begin(); it!=child.end(); ++it) {
+      (*it)->intersect(hit, ray);
+    }
   }
 };
 
-Hit intersect(const Ray &ray, const Scene &s)
-{ return s.intersect(Hit(infinity, Vec(0, 0, 0)), ray); }
+inline
+void intersect(const Ray &ray, const Scene &s, Hit& hit)
+{ s.intersect(hit, ray); }
 
+inline
 float ray_trace(const Vec &light, const Ray &ray, const Scene &s) {
-  Hit hit = intersect(ray, s);
+  Hit hit(infinity, Vec(0, 0, 0));
+  intersect(ray, s, hit);
   if (hit.first == infinity) return 0;
   float g = dot(hit.second, light);
   if (g >= 0) return 0.;
   Vec p = ray.orig + hit.first*ray.dir + delta*hit.second;
-  return (intersect(Ray(p, -1. * light), s).first < infinity ? 0 : -g);
+  intersect(Ray(p, -1. * light), s, hit);
+  return hit.first < infinity ? 0 : -g;
 }
 
 Scene *create(int level, const Vec &c, float r) {

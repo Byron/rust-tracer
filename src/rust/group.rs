@@ -25,6 +25,7 @@ pub struct TypedGroup<B, I> {
 
 /// It's interesting that 'type' is indeed a new type, and not a type-def ! At least 
 /// when used in this situation !!!
+/// We actually have our own type methods, but would share instance methods
 impl SphericalGroup {
 
     fn pyramid_recursive(level: u32, p: &Vector, r: RFloat) -> TypedGroupPair<Sphere, Sphere> {
