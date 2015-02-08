@@ -20,7 +20,7 @@ make -C src/go image
 make -C src/cpp image
 
 # Use more cores with go implementation to witness speedup
-GOMAXPROCS=4 src/go image
+GOMAXPROCS=4 make src/go image
 ```
 
 ## Original Credits

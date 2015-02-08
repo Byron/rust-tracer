@@ -76,7 +76,7 @@ pub struct RGBABuffer {
 
 impl RGBABuffer {
     fn new(r: &ImageRegion) -> RGBABuffer {
-        let mut v = Vec::with_capacity(r.area() * 4);
+        let mut v = Vec::with_capacity(r.area() * RGBABuffer::components());
         let l = v.capacity();
         unsafe {v.set_len(l)};
         RGBABuffer {
