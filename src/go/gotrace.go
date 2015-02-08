@@ -103,7 +103,7 @@ type Ray struct {
 }
 
 type Geometry interface {
-	Intersect(h *Hit, r *Ray) *Hit
+	Intersect(h *Hit, r *Ray)
 	Print() // Temporary until fmt handles interfaces.
 }
 
@@ -126,12 +126,13 @@ func (s *Sphere) RaySphere(r *Ray) float32 {
 	return t2
 }
 
-func (s *Sphere) Intersect(h *Hit, r *Ray) *Hit {
+func (s *Sphere) Intersect(h *Hit, r *Ray) {
 	lambda := s.RaySphere(r)
 	if lambda >= h.distance {
-		return h
+		return
 	}
-	return &Hit{lambda, normalize(vec3add(r.orig, vec3sub(vec3mulf(r.dir, lambda), s.center)))}
+	h.distance = lambda
+	h.pos = normalize(vec3add(r.orig, vec3sub(vec3mulf(r.dir, lambda), s.center)))
 }
 
 func (s *Sphere) Print() {
@@ -152,16 +153,14 @@ func (g *Group) Print() {
 	}
 }
 
-func (g *Group) Intersect(h *Hit, r *Ray) *Hit {
+func (g *Group) Intersect(h *Hit, r *Ray) {
 	l := g.bound.RaySphere(r)
 	if l >= h.distance {
-		return h
+		return
 	}
-	hit2 := h
-	for i := 0; i < len(g.children); i++ {
-		hit2 = g.children[i].Intersect(hit2, r)
+	for _, c := range g.children {
+		c.Intersect(h, r)
 	}
-	return hit2
 }
 
 func NewGroup(bound Sphere, children []Geometry) *Group {
@@ -169,10 +168,6 @@ func NewGroup(bound Sphere, children []Geometry) *Group {
 	g.bound = bound
 	g.children = children
 	return g
-}
-
-func intersect(r *Ray, s Geometry) *Hit {
-	return s.Intersect(&hitinfinity, r)
 }
 
 type Scene struct {
@@ -188,17 +183,20 @@ func createScene(light Vec3, g Geometry) *Scene {
 }
 
 func (s *Scene) rayTrace(r *Ray) Vec3 {
-	h := intersect(r, s.g)
-	if h.distance == infinity {
+	var hit Hit = hitinfinity
+	s.g.Intersect(&hit, r)
+	if hit.distance == infinity {
 		return backgroundColor
 	}
-	g := vec3dot(h.pos, s.light)
+	g := vec3dot(hit.pos, s.light)
 	if g >= 0.0 {
 		// The hit intersection is in shadow
 		return ambientSphereColor
 	}
-	p := vec3add(r.orig, vec3add(vec3mulf(r.dir, h.distance), vec3mulf(h.pos, delta)))
-	if intersect(&Ray{p, vec3mulf(s.light, -1.0)}, s.g).distance < infinity {
+	p := vec3add(r.orig, vec3add(vec3mulf(r.dir, hit.distance), vec3mulf(hit.pos, delta)))
+	hit.distance = infinity
+	s.g.Intersect(&hit, &Ray{p, vec3mulf(s.light, -1.0)})
+	if hit.distance < infinity {
 		// There`s an object between us and the light.
 		return ambientSphereColor
 	}

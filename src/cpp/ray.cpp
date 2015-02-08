@@ -91,6 +91,7 @@ float ray_trace(const Vec &light, const Ray &ray, const Scene &s) {
   float g = dot(hit.second, light);
   if (g >= 0) return 0.;
   Vec p = ray.orig + hit.first*ray.dir + delta*hit.second;
+  hit.first = infinity;
   intersect(Ray(p, -1. * light), s, hit);
   return hit.first < infinity ? 0 : -g;
 }
