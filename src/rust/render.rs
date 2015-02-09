@@ -269,13 +269,16 @@ impl Renderer {
     }
 }
 
-pub struct PPMStdoutRGBABufferWriter {
-    out: old_io::LineBufferedWriter<stdio::StdWriter>,
+pub struct PPMStdoutRGBABufferWriter<'a> {
+    out: &'a mut (old_io::Writer + 'a),
     image: Option<RGBABuffer>,
     rgb: bool,
 }
 
-impl Drop for PPMStdoutRGBABufferWriter {
+// It's required to mark it unsafe, as the compiler apparently can't verify 
+// that our `out` reference is still valid (even though the bounds say just that)
+#[unsafe_destructor]
+impl<'a> Drop for PPMStdoutRGBABufferWriter<'a> {
     fn drop(&mut self) {
         // We always write our entire buffer - it will just be zero initially
         // Can't write entire buffer :( thanks to alpha channel
@@ -293,15 +296,15 @@ impl Drop for PPMStdoutRGBABufferWriter {
     }
 }
 
-impl PPMStdoutRGBABufferWriter {
-    pub fn new(write_rgb: bool) -> PPMStdoutRGBABufferWriter {
-        PPMStdoutRGBABufferWriter { out: old_io::stdout(),
-                               image: None,
-                               rgb: write_rgb }
+impl<'a> PPMStdoutRGBABufferWriter<'a> {
+    pub fn new(write_rgb: bool, writer: &'a mut old_io::Writer) -> PPMStdoutRGBABufferWriter<'a> {
+        PPMStdoutRGBABufferWriter {out: writer,
+                                   image: None,
+                                   rgb: write_rgb }
     }
 }
 
-impl RGBABufferWriter for PPMStdoutRGBABufferWriter {
+impl<'a> RGBABufferWriter for PPMStdoutRGBABufferWriter<'a> {
     fn begin(&mut self, x: u16, y: u16) {
         let mut ptype: &str = "P5";
         if self.rgb {

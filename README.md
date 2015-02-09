@@ -23,6 +23,10 @@ make -C src/cpp image
 GOMAXPROCS=4 make src/go image
 ```
 
+## Lessons Learned
+
+* Instead of parameterizing primitive number types in generics, use a type alias instead. That way, the code is simpler overall, and you may use number literals in your code. This is viable if you just want to test how different number types will affect your runtime performance.
+
 ## Original Credits
 
 The `go` based raytracer was originally written by Jack Palevich. For more information, see http://grammerjack.blogspot.com/2009/11/multi-threaded-go-raytracer.html.

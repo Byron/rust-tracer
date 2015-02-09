@@ -5,6 +5,7 @@ use tracer::{Scene, Renderer, RenderOptions, PPMStdoutRGBABufferWriter};
 use std::default::Default;
 use std::env;
 use std::sync::{TaskPool, Arc};
+use std::old_io;
 
 #[allow(dead_code)]
 fn main() {
@@ -18,6 +19,7 @@ fn main() {
                                   height: 1024,
                                   samples_per_pixel: 1 };
 
-    Renderer::render(&options, s.clone(), &mut PPMStdoutRGBABufferWriter::new(false), &pool);
+    let mut stdout = old_io::stdout();
+    Renderer::render(&options, s.clone(), &mut PPMStdoutRGBABufferWriter::new(false, &mut stdout), &pool);
     env::set_exit_status(0);
 }

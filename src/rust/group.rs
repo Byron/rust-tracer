@@ -64,6 +64,26 @@ impl SphericalGroup {
     }
 }
 
+impl <B, I> TypedGroup<B, I> {
+
+    /// Returns (num_groups, num_items), where the items are our actual payload
+    fn count(&self) -> (usize, usize) {
+        let mut ng = 1us;
+        let mut ni = 0us;
+        for item in self.children.iter() {
+            match *item {
+                Pair::Item(_) => ni += 1,
+                Pair::Group(ref g) => {
+                    let (gng, gni) = g.count();
+                    ng += gng;
+                    ni += gni;
+                }
+            }
+        }
+        (ng, ni)
+    }    
+}
+
 impl<B, I> Intersectable for TypedGroup<B, I> where B: DistanceMeasure, I: Intersectable {
     fn intersect(&self, hit: &mut Hit, ray: &Ray){
         if self.bound.distance_from_ray(&ray) >= hit.distance {
@@ -151,6 +171,7 @@ mod tests {
                                                      z: 0.0 }, 1.0);
 
         assert_eq!(g.children.len(), 5);
+        assert_eq!(g.count(), (5461, 21845));
     }
 
     const ITERATIONS: usize = 10000;
