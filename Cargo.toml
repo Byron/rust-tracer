@@ -11,3 +11,9 @@ path = "src/rust/lib.rs"
 [[bin]]
 name = "rtrace"
 path = "src/rust/main.rs"
+
+[dependencies]
+time = "*"
+docopt = "*"
+rustc-serialize = "*"
+docopt_macros = "*"

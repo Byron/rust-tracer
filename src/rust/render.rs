@@ -1,3 +1,5 @@
+extern crate time;
+
 /// Implements the actual raytracer which produces the final image
 use std::num::Float;
 use std::old_io;
@@ -7,6 +9,7 @@ use std::sync::{TaskPool, Arc};
 use std::default::Default;
 use std::iter::range_step;
 use std::sync::mpsc::sync_channel;
+use std::time::Duration;
 use super::vec::{Vector, RFloat};
 use super::group::SphericalGroup;
 use super::primitive::{Intersectable, Ray, Hit};
@@ -116,7 +119,7 @@ impl RGBABuffer {
 
         if self.reg == b.reg {
             self.buf = b.buf.clone();
-            return;
+            return
         }
 
         for y in range(b.reg.b, b.reg.t) {
@@ -274,12 +277,15 @@ pub enum FileOrAnyWriter<'a> {
     FileWriter(old_io::BufferedWriter<old_io::File>),
 }
 
+// A bloated ppm writer, which could be generalized rather easily, if required
 pub struct PPMStdoutRGBABufferWriter<'a> {
     out: &'a mut FileOrAnyWriter<'a>,
     width: Option<u16>,
     height: Option<u16>,
     image: Option<RGBABuffer>,
     rgb: bool,
+    last_written_at: Option<time::Tm>,
+    buffer_dirty: bool,
 }
 
 // It's required to mark it unsafe, as the compiler apparently can't verify 
@@ -287,10 +293,7 @@ pub struct PPMStdoutRGBABufferWriter<'a> {
 #[unsafe_destructor]
 impl<'a> Drop for PPMStdoutRGBABufferWriter<'a> {
     fn drop(&mut self) {
-        // In tty mode, we flush exactly once
-        if !self.output_is_file() {
-            self.write_buffer_with_header();
-        }
+        self.write_buffer_with_header();
     }
 }
 
@@ -300,7 +303,9 @@ impl<'a> PPMStdoutRGBABufferWriter<'a> {
                                    image: None,
                                    width: None,
                                    height: None,
-                                   rgb: write_rgb }
+                                   rgb: write_rgb,
+                                   last_written_at: None,
+                                   buffer_dirty: false }
     }
 }
 
@@ -314,9 +319,18 @@ impl<'a> PPMStdoutRGBABufferWriter<'a> {
     }
 
     fn write_buffer_with_header(&mut self) {
+        if !self.buffer_dirty {
+            return
+        }
+
         let out: &mut old_io::Writer = match *self.out {
             FileOrAnyWriter::FileWriter(ref mut w) => {
-                w.get_mut().truncate(0);
+                w.get_mut().truncate(0)
+                           .ok()
+                           .expect("Truncate file to be empty");
+                w.get_mut().seek(0, old_io::SeekStyle::SeekSet)
+                           .ok()
+                           .expect("Truncation must be 'flushed' to disk to update meta-data");
                 w
             }
             FileOrAnyWriter::AnyWriter(ref mut w) => w
@@ -346,6 +360,9 @@ impl<'a> PPMStdoutRGBABufferWriter<'a> {
                 out.write_u8(avg).unwrap();
             }
         }
+
+        out.flush();
+        self.buffer_dirty = false;
     }
 }
 
@@ -358,9 +375,13 @@ impl<'a> RGBABufferWriter for PPMStdoutRGBABufferWriter<'a> {
 
     fn write_rgba_buffer(&mut self, buffer: &RGBABuffer) {
         self.image.as_mut().unwrap().set_pixels_from_buffer(buffer);
+        self.buffer_dirty = true;
 
         // Flush full image right away
-        if self.output_is_file() {
+        if self.output_is_file() && (
+                self.last_written_at.is_none() || 
+                self.last_written_at.unwrap() + Duration::seconds(1) <= time::now()) {
+            self.last_written_at = Some(time::now());
             self.write_buffer_with_header();
         }
     }
