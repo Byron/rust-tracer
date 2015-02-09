@@ -161,6 +161,8 @@ impl Renderer {
 
     #[inline]
     fn raytrace(s: &Scene, r: &Ray, c: &mut Vector) -> RFloat {
+        const AMBIENT: Vector = Vector { x: 0.2, y: 0.2, z: 0.2};
+
         let mut h = Hit::missed();
         s.group.intersect(&mut h, r);
         if h.has_missed() {
@@ -170,9 +172,9 @@ impl Renderer {
         if g >= 0.0 {
             return 0.0;
         }
-        let p = r.pos + 
-                    (r.dir.mulfed(h.distance)) + 
-                    *h.pos.mulf(h.distance * <RFloat as Float>::epsilon().sqrt());
+        let p = &r.pos + 
+                    &(&r.dir.mulfed(h.distance) + 
+                       h.pos.mulf(h.distance * <RFloat as Float>::epsilon().sqrt()));
 
         // if there is something between us and the light, we are in shadow
         h.set_missed();
@@ -184,6 +186,8 @@ impl Renderer {
             c.y = c.y - g;
             c.z = c.z - g;
             return 1.0;
+        } else {
+            // c = *c + AMBIENT;
         }
 
         0.0

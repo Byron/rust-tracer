@@ -58,6 +58,6 @@ fn main() {
                                     samples_per_pixel: args.flag_samples_per_pixel };
 
     Renderer::render(&options, s.clone(), 
-                     &mut PPMStdoutRGBABufferWriter::new(false, &mut output), &pool);
+                     &mut PPMStdoutRGBABufferWriter::new(true, &mut output), &pool);
     env::set_exit_status(0);
 }

@@ -53,7 +53,7 @@ impl Default for Sphere {
 impl DistanceMeasure for Sphere {
     #[inline(always)]
     fn distance_from_ray(&self, r: &Ray) -> RFloat {
-        let v = self.center - r.pos;
+        let v = &self.center - &r.pos;
         let b = v.dot(&r.dir);
         let disc = b * b - v.dot(&v) + self.radius * self.radius;
 
@@ -80,7 +80,7 @@ impl Intersectable for Sphere {
             return;
         }
         hit.distance = distance;
-        hit.pos = (ray.pos + (ray.dir.mulfed(distance) - self.center)).normalized();
+        hit.pos = (&ray.pos + &(&ray.dir.mulfed(distance) - &self.center)).normalized();
     }
 }
 
