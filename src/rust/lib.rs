@@ -7,5 +7,5 @@ mod primitive;
 mod group;
 mod render;
 
-pub use render::{Scene, Renderer, RenderOptions, PPMStdoutRGBABufferWriter};
+pub use render::{Scene, Renderer, RenderOptions, PPMStdoutRGBABufferWriter, FileOrAnyWriter};
 

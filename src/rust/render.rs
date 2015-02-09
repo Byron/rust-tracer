@@ -269,8 +269,15 @@ impl Renderer {
     }
 }
 
+pub enum FileOrAnyWriter<'a> {
+    AnyWriter(old_io::LineBufferedWriter<old_io::stdio::StdWriter>),
+    FileWriter(old_io::BufferedWriter<old_io::File>),
+}
+
 pub struct PPMStdoutRGBABufferWriter<'a> {
-    out: &'a mut (old_io::Writer + 'a),
+    out: &'a mut FileOrAnyWriter<'a>,
+    width: Option<u16>,
+    height: Option<u16>,
     image: Option<RGBABuffer>,
     rgb: bool,
 }
@@ -280,45 +287,82 @@ pub struct PPMStdoutRGBABufferWriter<'a> {
 #[unsafe_destructor]
 impl<'a> Drop for PPMStdoutRGBABufferWriter<'a> {
     fn drop(&mut self) {
-        // We always write our entire buffer - it will just be zero initially
-        // Can't write entire buffer :( thanks to alpha channel
-        let buf = self.image.as_ref().unwrap().buffer();
-        for po in range_step(0, buf.len(), RGBABuffer::components()) {
-            let b = &buf[po .. po + 3];
-
-            if self.rgb {
-                self.out.write_all(b).unwrap();
-            } else {
-                let avg = ((b[0] as f32 + b[1] as f32 + b[2] as f32) / 3.0f32) as u8;
-                self.out.write_u8(avg).unwrap();
-            }
+        // In tty mode, we flush exactly once
+        if !self.output_is_file() {
+            self.write_buffer_with_header();
         }
     }
 }
 
 impl<'a> PPMStdoutRGBABufferWriter<'a> {
-    pub fn new(write_rgb: bool, writer: &'a mut old_io::Writer) -> PPMStdoutRGBABufferWriter<'a> {
+    pub fn new(write_rgb: bool, writer: &'a mut FileOrAnyWriter) -> PPMStdoutRGBABufferWriter<'a> {
         PPMStdoutRGBABufferWriter {out: writer,
                                    image: None,
+                                   width: None,
+                                   height: None,
                                    rgb: write_rgb }
+    }
+}
+
+impl<'a> PPMStdoutRGBABufferWriter<'a> {
+
+    fn output_is_file(&self) -> bool {
+        match *self.out {
+            FileOrAnyWriter::FileWriter(ref w) => true,
+            _ => false,
+        }
+    }
+
+    fn write_buffer_with_header(&mut self) {
+        let out: &mut old_io::Writer = match *self.out {
+            FileOrAnyWriter::FileWriter(ref mut w) => {
+                w.get_mut().truncate(0);
+                w
+            }
+            FileOrAnyWriter::AnyWriter(ref mut w) => w
+        };
+
+        let mut ptype: &str = "P5";
+        if self.rgb {
+            ptype = "P6"
+        }
+        out.write_line(ptype).unwrap();
+        out.write_line(&format!("{} {}", self.width.expect("begin() called"), 
+                                         self.height.expect("begin() called"))[]).unwrap();
+        out.write_line("255").unwrap();
+
+        // We always write our entire buffer - it will just be zero initially
+        
+
+        let buf = self.image.as_ref().unwrap().buffer();
+        // Can't write entire buffer :( thanks to alpha channel.
+        for po in range_step(0, buf.len(), RGBABuffer::components()) {
+            let b = &buf[po .. po + 3];
+
+            if self.rgb {
+                out.write_all(b).unwrap();
+            } else {
+                let avg = ((b[0] as f32 + b[1] as f32 + b[2] as f32) / 3.0f32) as u8;
+                out.write_u8(avg).unwrap();
+            }
+        }
     }
 }
 
 impl<'a> RGBABufferWriter for PPMStdoutRGBABufferWriter<'a> {
     fn begin(&mut self, x: u16, y: u16) {
-        let mut ptype: &str = "P5";
-        if self.rgb {
-            ptype = "P6"
-        }
-        self.out.write_line(ptype).unwrap();
-        self.out.write_line(&format!("{} {}", x, y)[]).unwrap();
-        self.out.write_line("255").unwrap();
-
+        self.width = Some(x);
+        self.height= Some(y);
         self.image = Some(RGBABuffer::new(&ImageRegion { l: 0, r: x, b: 0, t: y }));
     }
 
     fn write_rgba_buffer(&mut self, buffer: &RGBABuffer) {
         self.image.as_mut().unwrap().set_pixels_from_buffer(buffer);
+
+        // Flush full image right away
+        if self.output_is_file() {
+            self.write_buffer_with_header();
+        }
     }
 }
 
