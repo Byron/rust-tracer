@@ -46,7 +46,7 @@ impl SphericalGroup {
         let rn: RFloat = 3.0 * r / 12.0.sqrt();
         for dz in range_step_inclusive(-1i32, 1, 2) {
             for dx in range_step_inclusive(-1i32, 1, 2) {
-                let np = p + &Vector { x: dx as RFloat * rn,
+                let np = *p + Vector { x: dx as RFloat * rn,
                                        y: rn, 
                                        z: dz as RFloat * rn };
                 g.children.push(SphericalGroup::pyramid_recursive(level-1, &np, r * 0.5));

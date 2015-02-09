@@ -13,34 +13,34 @@ pub struct Vector {
     pub z: RFloat,
 }
 
-impl<'a> Add<&'a Vector> for &'a Vector {
+impl Add for Vector {
     type Output = Vector;
 
     // Probably it will be optimized to not actually copy self and rhs for each call !
     #[inline(always)]
-    fn add(self, rhs: &Vector) -> Vector {
+    fn add(self, rhs: Vector) -> Vector {
       Vector {  x: self.x + rhs.x,
                 y: self.y + rhs.y, 
                 z: self.z + rhs.z }
     }
 }
 
-impl<'a> Sub<&'a Vector> for &'a Vector {
+impl Sub for Vector {
     type Output = Vector;
 
     #[inline(always)]
-    fn sub(self, rhs: &Vector) -> Vector {
+    fn sub(self, rhs: Vector) -> Vector {
       Vector {  x: self.x - rhs.x,
                 y: self.y - rhs.y, 
                 z: self.z - rhs.z }
     }   
 }
 
-impl<'a> Mul<&'a Vector> for &'a Vector {
+impl Mul for Vector {
     type Output = Vector;
 
     #[inline(always)]
-    fn mul(self, rhs: &Vector) -> Vector {
+    fn mul(self, rhs: Vector) -> Vector {
       Vector {  x: self.x * rhs.x,
                 y: self.y * rhs.y, 
                 z: self.z * rhs.z }

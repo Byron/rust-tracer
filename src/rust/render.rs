@@ -161,20 +161,30 @@ impl Renderer {
 
     #[inline]
     fn raytrace(s: &Scene, r: &Ray, c: &mut Vector) -> RFloat {
-        const AMBIENT: Vector = Vector { x: 0.2, y: 0.2, z: 0.2};
+        const OBJECT: Vector = Vector { x: 0xae as RFloat / 255.0, 
+                                        y: 0x31 as RFloat / 255.0, 
+                                        z: 0x31 as RFloat / 255.0};
+        const BACKGROUND: Vector = Vector { x: 0x22 as RFloat / 255.0, 
+                                            y: 0x0a as RFloat / 255.0, 
+                                            z: 0x0a as RFloat / 255.0};
+        const AMBIENT_OFFSET: Vector = Vector { x: BACKGROUND.x * 0.8, 
+                                                y: BACKGROUND.y * 0.8, 
+                                                z: BACKGROUND.z * 0.8 };
 
         let mut h = Hit::missed();
         s.group.intersect(&mut h, r);
         if h.has_missed() {
+            *c = *c + BACKGROUND;
             return 0.0;
         }
         let g = h.pos.dot(&s.directional_light);
         if g >= 0.0 {
+            *c = *c + AMBIENT_OFFSET;
             return 0.0;
         }
-        let p = &r.pos + 
-                    &(&r.dir.mulfed(h.distance) + 
-                       h.pos.mulf(h.distance * <RFloat as Float>::epsilon().sqrt()));
+        let p = r.pos + 
+                    (r.dir.mulfed(h.distance)) + 
+                    *h.pos.mulf(h.distance * <RFloat as Float>::epsilon().sqrt());
 
         // if there is something between us and the light, we are in shadow
         h.set_missed();
@@ -182,15 +192,12 @@ impl Renderer {
                           &Ray { pos: p,
                                   dir: s.directional_light.mulfed(-1.0) });
         if h.has_missed() {
-            c.x = c.x - g;
-            c.y = c.y - g;
-            c.z = c.z - g;
-            return 1.0;
+            *c = *c + OBJECT.mulfed(-g) + AMBIENT_OFFSET;
+            return 1.0
         } else {
-            // c = *c + AMBIENT;
+            *c = *c + BACKGROUND + AMBIENT_OFFSET.mulfed(-g);
+            return 0.0
         }
-
-        0.0
     }
 
     // Render region is inherently single-threaded
