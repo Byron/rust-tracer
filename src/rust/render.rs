@@ -3,7 +3,6 @@ extern crate time;
 /// Implements the actual raytracer which produces the final image
 use std::num::Float;
 use std::old_io;
-use std::old_io::stdio;
 use std::ops::{Drop, Deref};
 use std::sync::{TaskPool, Arc};
 use std::default::Default;
@@ -263,11 +262,11 @@ impl Renderer {
 
                 pool.execute(move|| {
                     let mut b = RGBABuffer::new(&ImageRegion { l: x, r: x + CHUNK_SIZE, 
-                                                           b: y, t: y + CHUNK_SIZE });
+                                                               b: y, t: y + CHUNK_SIZE });
 
                     Renderer::render_region(&opts, tscene.deref(), &mut b);
 
-                    tx.send(b).ok();
+                    tx.send(b).ok().expect("Channel should be open !");
                 });
             }
         }
@@ -280,6 +279,7 @@ impl Renderer {
                 break;
             }
         }
+        assert!(count == 0, "We really should have processed all chunks here");
     }
 }
 
@@ -324,7 +324,7 @@ impl<'a> PPMStdoutRGBABufferWriter<'a> {
 
     fn output_is_file(&self) -> bool {
         match *self.out {
-            FileOrAnyWriter::FileWriter(ref w) => true,
+            FileOrAnyWriter::FileWriter(_) => true,
             _ => false,
         }
     }
@@ -372,7 +372,7 @@ impl<'a> PPMStdoutRGBABufferWriter<'a> {
             }
         }
 
-        out.flush();
+        out.flush().ok();
         self.buffer_dirty = false;
     }
 }

@@ -26,6 +26,11 @@ GOMAXPROCS=4 make src/go image
 ## Lessons Learned
 
 * Instead of parameterizing primitive number types in generics, use a type alias instead. That way, the code is simpler overall, and you may use number literals in your code. This is viable if you just want to test how different number types will affect your runtime performance.
+* When using multi-threading, everything used by a thread needs to have static lifetime. To assure that, you can
+  * create resources within the thread, handle them and send a particular result through a channel.
+  * pass in read-only shared resources through an `Arc`. The latter is a reference counted item on the heap.
+  * pass writable resources through an `Arc<Mutex<R>>` to allow synchronized access.
+  * *Yes, it's not currently possible to signal a resource is safe for use if allocated on a stack and protected by guards that will assure the resource remains alive during the thread runtime.*
 
 ## Original Credits
 

@@ -389,7 +389,7 @@ func main() {
 	w := n
 	h := n
 	workers := 8
-	ss := 1 // oversampling - use 4 to get 16 samples
+	ss := 4 // oversampling - use 4 to get 16 samples
 	t := NewTexture(w, h)
 	light := normalize(Vec3{-1.0, -3.0, 2.0})
 	sp := createSpherePyramid(level, Vec3{0.0, -1.0, 0.0}, 1.0)
