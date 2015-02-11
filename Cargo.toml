@@ -1,8 +1,14 @@
 [package]
 
 name = "tracer"
-version = "0.0.1"
+version = "0.1.0"
 authors = ["Sebastian Thiel <byronimo@gmail.com>"]
+description = "A pet raytracer to test overall pseudo-performance and multi-threading"
+repository = "https://github.com/Byron/rust-tracer"
+readme = "README.md"
+license = "BSD-3-Clause"
+license-file = "LICENSE.md"
+keywords = ["raytracing", "rendering", "CGI"]
 
 [lib]
 name = "tracer"
