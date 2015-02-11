@@ -1,6 +1,6 @@
 [root]
-name = "tracer"
-version = "0.0.1"
+name = "rtrace"
+version = "0.1.0"
 dependencies = [
  "docopt 0.6.36 (registry+https://github.com/rust-lang/crates.io-index)",
  "docopt_macros 0.6.36 (registry+https://github.com/rust-lang/crates.io-index)",

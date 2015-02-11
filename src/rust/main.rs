@@ -1,12 +1,12 @@
 #![cfg(not(test))]
 #![feature(std_misc,io,std_misc,unsafe_destructor,path,env,plugin)]
-extern crate tracer;
+extern crate sphere_tracer;
 
 extern crate docopt;
 extern crate "rustc-serialize" as rustc_serialize;
 #[plugin] #[no_link] extern crate docopt_macros;
 
-use tracer::{Scene, Renderer, RenderOptions, PPMStdoutRGBABufferWriter, FileOrAnyWriter};
+use sphere_tracer::{Scene, Renderer, RenderOptions, PPMStdoutRGBABufferWriter, FileOrAnyWriter};
 use std::default::Default;
 use std::env;
 use std::sync::{TaskPool, Arc};
