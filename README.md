@@ -11,21 +11,41 @@ Meet the Rustaceans, a young species, and follow them on their curious quest for
 
 ## How to run
 
-Make sure you have gcc installed as well as go for the respective version. Then it's the following to produce images and
-time them.
-Please note that they will only use one core by default - the cpp version doesn't impelement multi-threading.
+Generating images is as easy as running make in the respective source folder. We assume you have rust, go and gcc installed and in your PATH.
 
 ```bash
+# rust
+make image
+# go
 make -C src/go image
+# c++
 make -C src/cpp image
 
 # Use more cores with go implementation to witness speedup
 GOMAXPROCS=4 make src/go image
+# Same with rust
+RTRACEMAXPROCS=4 make image
 ```
 
 ## Season 1 Conclusion
 
+![rtrace-image](https://raw.githubusercontent.com/Byron/rust-tracer/master/src/img/rtrace-output.png)
 
+Even though the rustacean RaySpheres are the prettiest thanks to an improved shading algorithm, on a single core we are not fastest. For some reason, **C++ is 7 percent faster** even though it is inefficient when creating the scene of more than 20.000 spheres and even though it uses virtual method calls.
+
+Only when rust enters multi-threaded rendering mode, it is the fastest in town, as C++ doesn't implement multi-threading in this case.
+
+Not to forget, go, which is far behind being about three times slower, no matter what.
+
+## Season 2 Preview
+
+Things to do, in season two ... 
+
+* Let multiple threads share a single image buffer, and handle the resulting unsafe code accordingly.
+ * Currently, we use more memory than needed as every thread owns its own 64x64x4 u8 byte buffer, which is then written into a full-sized one resembling the final frame.
+* Use piston window for real-time rendering visualization (in addition to image output)
+* Implement interactive rendering with undersampling and simple camera controls.
+* Use the mouse-pointer to focus rendering on buckets underneath
 
 ## Lessons Learned
 

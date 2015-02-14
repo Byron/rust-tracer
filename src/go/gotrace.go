@@ -383,11 +383,10 @@ func (renderer *Renderer) worker(tint Vec3) {
 
 func main() {
 	level := 8
-	n := 1024
 	chunkw := 16
 	chunkh := 16
-	w := n
-	h := n
+	w := 1024
+	h := 768
 	workers := 8
 	ss := 4 // oversampling - use 4 to get 16 samples
 	t := NewTexture(w, h)
@@ -395,7 +394,7 @@ func main() {
 	sp := createSpherePyramid(level, Vec3{0.0, -1.0, 0.0}, 1.0)
 	scene := createScene(light, sp)
 	eye := Vec3{0, 0, -4.0}
-	camera := Camera{eye, n, n}
+	camera := Camera{eye, w, h}
 	quitChan := make(chan bool)
 	joinChan := make(chan bool)
 	jobChan := make(chan Rect)

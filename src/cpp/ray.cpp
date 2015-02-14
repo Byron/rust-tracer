@@ -110,17 +110,17 @@ Scene *create(int level, const Vec &c, float r) {
 }
 
 int main(int argc, char *argv[]) {
-  int level = 8, n = 1024, ss = 4;
+  int level = 8, w = 1024, h = 768, ss = 4;
   if (argc == 2) level = atoi(argv[1]);
   Vec light = unitise(Vec(-1, -3, 2));
   Scene *s(create(level, Vec(0, -1, 0), 1));
-  cout << "P5\n" << n << " " << n << "\n255\n";
-  for (int y=n-1; y>=0; --y)
-    for (int x=0; x<n; ++x) {
+  cout << "P5\n" << w << " " << h << "\n255\n";
+  for (int y=h-1; y>=0; --y)
+    for (int x=0; x<w; ++x) {
       float g=0;
       for (int dx=0; dx<ss; ++dx)
         for (int dy=0; dy<ss; ++dy) {
-          Vec dir(unitise(Vec(x+dx*1./ss-n/2., y+dy*1./ss-n/2., n)));
+          Vec dir(unitise(Vec(x+dx*1./ss-w/2., y+dy*1./ss-h/2., w)));
           g += ray_trace(light, Ray(Vec(0, 0, -4), dir), *s);
         }
       cout << char(int(.5 + 255. * g / (ss*ss)));
