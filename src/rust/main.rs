@@ -1,10 +1,12 @@
 #![cfg(not(test))]
 #![feature(std_misc,io,std_misc,unsafe_destructor,path,env,plugin)]
+#![plugin(docopt_macros)]
+
 extern crate sphere_tracer;
 
 extern crate docopt;
 extern crate "rustc-serialize" as rustc_serialize;
-#[plugin] #[no_link] extern crate docopt_macros;
+
 
 use sphere_tracer::{Scene, Renderer, RenderOptions, PPMStdoutRGBABufferWriter, FileOrAnyWriter};
 use std::default::Default;
@@ -38,10 +40,10 @@ Options:
 #[allow(dead_code)]
 fn main() {
     let s: Arc<Scene> = Arc::new(Default::default());
-    let nc_from_env = env::var_string("RTRACEMAXPROCS").ok()
-                                                       .unwrap_or("1".to_string())
-                                                       .parse::<usize>().ok()
-                                                       .unwrap_or(1);
+    let nc_from_env = env::var("RTRACEMAXPROCS").ok()
+                                                .unwrap_or("1".to_string())
+                                                .parse::<usize>().ok()
+                                                .unwrap_or(1);
 
     let args: Args = Args::docopt().decode().unwrap_or_else(|e| e.exit());
     let pool: TaskPool  = TaskPool::new(if args.flag_num_cores > 1

@@ -2,15 +2,15 @@
 name = "rtrace"
 version = "0.1.0"
 dependencies = [
- "docopt 0.6.36 (registry+https://github.com/rust-lang/crates.io-index)",
- "docopt_macros 0.6.36 (registry+https://github.com/rust-lang/crates.io-index)",
+ "docopt 0.6.37 (registry+https://github.com/rust-lang/crates.io-index)",
+ "docopt_macros 0.6.37 (registry+https://github.com/rust-lang/crates.io-index)",
  "rustc-serialize 0.2.12 (registry+https://github.com/rust-lang/crates.io-index)",
- "time 0.1.16 (registry+https://github.com/rust-lang/crates.io-index)",
+ "time 0.1.17 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "docopt"
-version = "0.6.36"
+version = "0.6.37"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "regex 0.1.14 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -19,10 +19,10 @@ dependencies = [
 
 [[package]]
 name = "docopt_macros"
-version = "0.6.36"
+version = "0.6.37"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "docopt 0.6.36 (registry+https://github.com/rust-lang/crates.io-index)",
+ "docopt 0.6.37 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -47,7 +47,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "time"
-version = "0.1.16"
+version = "0.1.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "gcc 0.1.7 (registry+https://github.com/rust-lang/crates.io-index)",

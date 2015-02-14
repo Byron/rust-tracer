@@ -462,6 +462,6 @@ mod tests {
         b.iter(|| {
             Renderer::render(&options, s.clone(), &mut dw, &pool);
         });
-        b.bytes += (H * H * SPP * SPP) as u64;
+        b.bytes = (H * H * SPP * SPP) as u64;
     }
 }

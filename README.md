@@ -23,6 +23,10 @@ make -C src/cpp image
 GOMAXPROCS=4 make src/go image
 ```
 
+## Season 1 Conclusion
+
+
+
 ## Lessons Learned
 
 * Instead of parameterizing primitive number types in generics, use a type alias instead. That way, the code is simpler overall, and you may use number literals in your code. This is viable if you just want to test how different number types will affect your runtime performance.

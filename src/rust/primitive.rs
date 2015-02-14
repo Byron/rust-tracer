@@ -177,7 +177,7 @@ mod sphere {
                 test::black_box(s.distance_from_ray(&r2));
             }
         });
-        b.bytes += (NUM_ITERATIONS * 2) as u64;
+        b.bytes = (NUM_ITERATIONS * 2) as u64;
     }
 
     #[bench]
@@ -192,7 +192,7 @@ mod sphere {
                 test::black_box(s.intersect(&mut h, &r2));
             }
         });
-        b.bytes += (NUM_ITERATIONS * 2) as u64;
+        b.bytes = (NUM_ITERATIONS * 2) as u64;
     }
 
 }

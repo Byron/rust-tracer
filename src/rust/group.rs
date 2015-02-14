@@ -190,6 +190,6 @@ mod tests {
                 h.set_missed();
             }
         });
-        b.bytes += (ITERATIONS * 3us) as u64;
+        b.bytes = (ITERATIONS * 3us) as u64;
     }
 }
