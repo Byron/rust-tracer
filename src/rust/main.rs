@@ -1,5 +1,5 @@
 #![cfg(not(test))]
-#![feature(std_misc,io,std_misc,unsafe_destructor,path,env,plugin)]
+#![feature(std_misc,old_io,old_path,std_misc,unsafe_destructor,env,plugin)]
 #![plugin(docopt_macros)]
 
 extern crate sphere_tracer;

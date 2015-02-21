@@ -7,7 +7,6 @@
 			"folder_exclude_patterns" : [
 				"target",
 				".git",
-				"target"
 			],
 			"file_exclude_patterns" : [
 				"cpptrace",

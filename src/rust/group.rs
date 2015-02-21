@@ -68,8 +68,8 @@ impl <B, I> TypedGroup<B, I> {
 
     /// Returns (num_groups, num_items), where the items are our actual payload
     fn count(&self) -> (usize, usize) {
-        let mut ng = 1us;
-        let mut ni = 0us;
+        let mut ng = 1usize;
+        let mut ni = 0usize;
         for item in self.children.iter() {
             match *item {
                 Pair::Item(_) => ni += 1,
@@ -190,6 +190,6 @@ mod tests {
                 h.set_missed();
             }
         });
-        b.bytes = (ITERATIONS * 3us) as u64;
+        b.bytes = (ITERATIONS * 3usize) as u64;
     }
 }

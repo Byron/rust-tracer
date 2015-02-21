@@ -250,7 +250,7 @@ impl Renderer {
 
         // Push all tasks
         let (tx, rx) = sync_channel::<RGBABuffer>(4);
-        let mut count = 0us;
+        let mut count = 0usize;
         for y in range_step(0u16, o.height, CHUNK_SIZE)  {
             for x in range_step(0u16, o.width, CHUNK_SIZE) {
 
@@ -283,14 +283,14 @@ impl Renderer {
     }
 }
 
-pub enum FileOrAnyWriter<'a> {
+pub enum FileOrAnyWriter {
     AnyWriter(old_io::LineBufferedWriter<old_io::stdio::StdWriter>),
     FileWriter(old_io::BufferedWriter<old_io::File>),
 }
 
 // A bloated ppm writer, which could be generalized rather easily, if required
 pub struct PPMStdoutRGBABufferWriter<'a> {
-    out: &'a mut FileOrAnyWriter<'a>,
+    out: &'a mut FileOrAnyWriter,
     width: Option<u16>,
     height: Option<u16>,
     image: Option<RGBABuffer>,
@@ -353,7 +353,7 @@ impl<'a> PPMStdoutRGBABufferWriter<'a> {
         }
         out.write_line(ptype).unwrap();
         out.write_line(&format!("{} {}", self.width.expect("begin() called"), 
-                                         self.height.expect("begin() called"))[]).unwrap();
+                                         self.height.expect("begin() called"))).unwrap();
         out.write_line("255").unwrap();
 
         // We always write our entire buffer - it will just be zero initially

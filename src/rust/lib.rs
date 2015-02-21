@@ -1,4 +1,4 @@
-#![feature(std_misc,core,io,collections,std_misc,unsafe_destructor)]
+#![feature(std_misc,core,old_io,collections,std_misc,unsafe_destructor)]
 #![feature(test)]
 
 mod vec;
