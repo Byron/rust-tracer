@@ -2,7 +2,6 @@ extern crate time;
 extern crate threadpool;
 
 /// Implements the actual raytracer which produces the final image
-use num::traits::Float;
 use std::ops::{Drop, Deref};
 use std::sync::Arc;
 use std::{io,fs};

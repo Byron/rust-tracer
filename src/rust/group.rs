@@ -1,6 +1,5 @@
 /// Implements a group of intersectable items
 
-use num::traits::Float;
 use super::vec::{Vector, RFloat};
 use std::default::Default;
 use std::iter::range_step_inclusive;
@@ -43,7 +42,7 @@ impl SphericalGroup {
         g.bound.center = *p;
         g.bound.radius = 3.0 * r;
 
-        let rn: RFloat = 3.0 * r / 12.0.sqrt();
+        let rn: RFloat = 3.0 * r / 12.0f32.sqrt();
         for dz in range_step_inclusive(-1i32, 1, 2) {
             for dx in range_step_inclusive(-1i32, 1, 2) {
                 let np = *p + Vector { x: dx as RFloat * rn,

@@ -1,9 +1,10 @@
 //! Allows to setup a scene with scenes in pyramidal layout, along with traits 
 //! to help shooting rays to check for intersections
 
-use num::traits::Float;
 use super::vec::{Vector, RFloat};
 use std::default::Default;
+
+use std::f32;
 
 #[derive(Default, PartialEq, Clone, Copy, Debug)]
 pub struct Ray {
@@ -20,17 +21,17 @@ pub struct Hit {
 impl Hit {
     pub fn missed() -> Hit {
         Hit {
-            distance: RFloat::infinity(),
+            distance: f32::INFINITY,
             pos: Default::default(),
         }
     }
 
     pub fn has_missed(&self) -> bool {
-        self.distance == Float::infinity()
+        self.distance == f32::INFINITY
     }
 
     pub fn set_missed(&mut self) {
-        self.distance = Float::infinity();
+        self.distance = f32::INFINITY;
     }
 }
 
@@ -57,13 +58,13 @@ impl DistanceMeasure for Sphere {
         let disc = b * b - v.dot(&v) + self.radius * self.radius;
 
         if disc < 0.0 {
-            return Float::infinity();
+            return f32::INFINITY;
         }
 
         let d = disc.sqrt();
         let t2 = b + d;
         if t2 < 0.0 {
-            return Float::infinity();
+            return f32::INFINITY;
         }
 
         let t1 = b - d;
@@ -114,7 +115,6 @@ mod sphere {
     extern crate num;
 
     use super::*;
-    use num::traits::Float;
     use std::default::Default;
     use super::super::vec::Vector;
     
@@ -142,7 +142,7 @@ mod sphere {
             let dfr = s.distance_from_ray(&r1);
             assert_eq!(dfr, 1.0);
             let dfr = s.distance_from_ray(&r2);
-            assert_eq!(dfr, Float::infinity());
+            assert_eq!(dfr, f32::INFINITY);
         }
 
         { 
