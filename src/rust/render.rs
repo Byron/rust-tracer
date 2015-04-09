@@ -1,17 +1,21 @@
 extern crate time;
+extern crate threadpool;
 
 /// Implements the actual raytracer which produces the final image
-use std::num::Float;
-use std::old_io;
+use num::traits::Float;
 use std::ops::{Drop, Deref};
-use std::sync::{TaskPool, Arc};
+use std::sync::Arc;
+use std::{io,fs};
 use std::default::Default;
-use std::iter::range_step;
 use std::sync::mpsc::sync_channel;
-use std::time::Duration;
 use super::vec::{Vector, RFloat};
 use super::group::SphericalGroup;
 use super::primitive::{Intersectable, Ray, Hit};
+
+use std::io::Seek;
+use self::threadpool::ThreadPool;
+
+use std::f32;
 
 
 pub trait RGBABufferWriter {
@@ -27,7 +31,7 @@ pub trait RGBABufferWriter {
 }
 
 
-#[derive(Copy)]
+#[derive(Clone, Copy)]
 pub struct RenderOptions {
     pub width: u16,
     pub height: u16,
@@ -36,7 +40,7 @@ pub struct RenderOptions {
 
 pub struct Renderer;
 
-#[derive(Copy, PartialEq)]
+#[derive(Clone, Copy, PartialEq)]
 pub struct ImageRegion {
     l: u16,
     t: u16,
@@ -121,7 +125,7 @@ impl RGBABuffer {
             return
         }
 
-        for y in range(b.reg.b, b.reg.t) {
+        for y in b.reg.b .. b.reg.t {
             let bl = self.reg.buffer_offset(b.reg.l, y) * RGBABuffer::components(); // bottom_left
             let their_bl = b.reg.buffer_offset(b.reg.l, y) * RGBABuffer::components();
             self.buf[bl .. bl + w].clone_from_slice(&b.buf[their_bl .. their_bl + w]);
@@ -183,7 +187,7 @@ impl Renderer {
         }
         let p = r.pos + 
                     (r.dir.mulfed(h.distance)) + 
-                    *h.pos.mulf(h.distance * <RFloat as Float>::epsilon().sqrt());
+                    *h.pos.mulf(h.distance * f32::EPSILON.sqrt());
 
         // if there is something between us and the light, we are in shadow
         h.set_missed();
@@ -211,13 +215,13 @@ impl Renderer {
         let mut ray = Ray { pos: scene.eye, 
                             dir: Default::default() };
 
-        for y in range(region.b, region.t) {
-            for x in range(region.l, region.r) {
+        for y in region.b .. region.t {
+            for x in region.l .. region.r {
                 let mut g: Vector = Default::default();
                 let mut alpha: RFloat = 0.0;
 
-                for ssx in range(0, o.samples_per_pixel) {
-                    for ssy in range(0, o.samples_per_pixel) {
+                for ssx in 0 .. o.samples_per_pixel {
+                    for ssy in 0 .. o.samples_per_pixel {
                         let xres = x as RFloat + ssx as RFloat / ssf;
                         let yres = y as RFloat + ssy as RFloat / ssf;
                         ray.dir.x = xres - width / 2.0;
@@ -241,7 +245,7 @@ impl Renderer {
     // (And to test this ;))
     // sets up multi-threading accordingly
     pub fn render(o: &RenderOptions, scene: Arc<Scene>, writer: &mut RGBABufferWriter, 
-                  pool: &TaskPool) {
+                  pool: &ThreadPool) {
         const CHUNK_SIZE: u16 = 64;
         assert!(o.width % CHUNK_SIZE == 0, "TODO: handle chunk sizes");
         assert!(o.height % CHUNK_SIZE == 0, "TODO: handle chunk sizes");
@@ -251,8 +255,8 @@ impl Renderer {
         // Push all tasks
         let (tx, rx) = sync_channel::<RGBABuffer>(4);
         let mut count = 0usize;
-        for y in range_step(0u16, o.height, CHUNK_SIZE)  {
-            for x in range_step(0u16, o.width, CHUNK_SIZE) {
+        for y in (0u16 .. o.height).step_by(CHUNK_SIZE)  {
+            for x in (0u16 .. o.width).step_by(CHUNK_SIZE) {
 
                 let tx = tx.clone();
                 let opts = *o;
@@ -284,8 +288,8 @@ impl Renderer {
 }
 
 pub enum FileOrAnyWriter {
-    AnyWriter(old_io::LineBufferedWriter<old_io::stdio::StdWriter>),
-    FileWriter(old_io::BufferedWriter<old_io::File>),
+    AnyWriter(io::Stdout),
+    FileWriter(io::BufWriter<fs::File>),
 }
 
 // A bloated ppm writer, which could be generalized rather easily, if required
@@ -334,14 +338,10 @@ impl<'a> PPMStdoutRGBABufferWriter<'a> {
             return
         }
 
-        let out: &mut old_io::Writer = match *self.out {
+        let out: &mut io::Write = match *self.out {
             FileOrAnyWriter::FileWriter(ref mut w) => {
-                w.get_mut().truncate(0)
-                           .ok()
-                           .expect("Truncate file to be empty");
-                w.get_mut().seek(0, old_io::SeekStyle::SeekSet)
-                           .ok()
-                           .expect("Truncation must be 'flushed' to disk to update meta-data");
+                w.get_mut().set_len(0).unwrap();
+                w.get_mut().seek(io::SeekFrom::Start(0)).unwrap();
                 w
             }
             FileOrAnyWriter::AnyWriter(ref mut w) => w
@@ -351,24 +351,24 @@ impl<'a> PPMStdoutRGBABufferWriter<'a> {
         if self.rgb {
             ptype = "P6"
         }
-        out.write_line(ptype).unwrap();
-        out.write_line(&format!("{} {}", self.width.expect("begin() called"), 
-                                         self.height.expect("begin() called"))).unwrap();
-        out.write_line("255").unwrap();
+        writeln!(out, "{}", ptype).unwrap();
+        writeln!(out, "{} {}", self.width.expect("begin() called"),
+                          self.height.expect("begin() called")).unwrap();
+        writeln!(out, "255").unwrap();
 
         // We always write our entire buffer - it will just be zero initially
         
 
         let buf = self.image.as_ref().unwrap().buffer();
         // Can't write entire buffer :( thanks to alpha channel.
-        for po in range_step(0, buf.len(), RGBABuffer::components()) {
+        for po in (0 .. buf.len()).step_by(RGBABuffer::components()) {
             let b = &buf[po .. po + 3];
 
             if self.rgb {
                 out.write_all(b).unwrap();
             } else {
                 let avg = ((b[0] as f32 + b[1] as f32 + b[2] as f32) / 3.0f32) as u8;
-                out.write_u8(avg).unwrap();
+                out.write(&[avg]).unwrap();
             }
         }
 
@@ -391,7 +391,7 @@ impl<'a> RGBABufferWriter for PPMStdoutRGBABufferWriter<'a> {
         // Flush full image right away
         if self.output_is_file() && (
                 self.last_written_at.is_none() || 
-                self.last_written_at.unwrap() + Duration::seconds(1) <= time::now()) {
+                self.last_written_at.unwrap() + time::Duration::seconds(1) <= time::now()) {
             self.last_written_at = Some(time::now());
             self.write_buffer_with_header();
         }
@@ -402,10 +402,13 @@ impl<'a> RGBABufferWriter for PPMStdoutRGBABufferWriter<'a> {
 #[cfg(test)]
 mod tests {
     extern crate test;
+    extern crate threadpool;
 
     use super::*;
-    use std::sync::{TaskPool, Arc};
+    use std::sync::Arc;
     use std::default::Default;
+
+    use self::threadpool::ThreadPool;
 
     #[derive(Default)]
     struct DummyWriter {
@@ -428,7 +431,7 @@ mod tests {
     #[test]
     fn basic_rendering() {
         let s: Arc<Scene> = Arc::new(Default::default());
-        let pool = TaskPool::new(1);
+        let pool = ThreadPool::new(1);
         let options = RenderOptions { width: W as u16, height: H as u16, samples_per_pixel: 2 };
 
         let mut dw: DummyWriter = Default::default();
@@ -454,7 +457,7 @@ mod tests {
     #[bench]
     fn bench_rendering(b: &mut test::Bencher) {
         const SPP: usize = 1;
-        let pool = TaskPool::new(4);
+        let pool = ThreadPool::new(4);
         let s: Arc<Scene> = Arc::new(Default::default());
         let options = RenderOptions { width: H as u16, height: H as u16, samples_per_pixel: SPP as u16 };
 

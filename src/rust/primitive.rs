@@ -1,18 +1,17 @@
 //! Allows to setup a scene with scenes in pyramidal layout, along with traits 
 //! to help shooting rays to check for intersections
 
+use num::traits::Float;
 use super::vec::{Vector, RFloat};
-use std::num::Float;
 use std::default::Default;
 
-
-#[derive(Default, PartialEq, Copy, Debug)]
+#[derive(Default, PartialEq, Clone, Copy, Debug)]
 pub struct Ray {
     pub pos: Vector,
     pub dir: Vector
 }
 
-#[derive(Copy)]
+#[derive(Clone, Copy)]
 pub struct Hit {
     pub distance: RFloat,
     pub pos: Vector,
@@ -21,7 +20,7 @@ pub struct Hit {
 impl Hit {
     pub fn missed() -> Hit {
         Hit {
-            distance: Float::infinity(),
+            distance: RFloat::infinity(),
             pos: Default::default(),
         }
     }
@@ -35,7 +34,7 @@ impl Hit {
     }
 }
 
-#[derive(Copy)]
+#[derive(Clone, Copy)]
 pub struct Sphere {
     pub center: Vector,
     pub radius: RFloat,
@@ -112,9 +111,10 @@ mod primitive_tests {
 #[cfg(test)]
 mod sphere {
     extern crate test;
+    extern crate num;
 
     use super::*;
-    use std::num::Float;
+    use num::traits::Float;
     use std::default::Default;
     use super::super::vec::Vector;
     
@@ -172,7 +172,7 @@ mod sphere {
     fn bench_ray_sphere(b: &mut test::Bencher) {
         let (r1, r2, s) = setup_scene();
         b.iter(|| {
-            for _ in range(0, NUM_ITERATIONS) {
+            for _ in 0 .. NUM_ITERATIONS {
                 test::black_box(s.distance_from_ray(&r1));
                 test::black_box(s.distance_from_ray(&r2));
             }
@@ -185,7 +185,7 @@ mod sphere {
         let (r1, r2, s) = setup_scene();
         let mut h = Hit::missed();
         b.iter(|| {
-            for _ in range(0, NUM_ITERATIONS) {
+            for _ in 0 .. NUM_ITERATIONS {
                 h.set_missed();
                 test::black_box(s.intersect(&mut h, &r1));
                 h.set_missed();

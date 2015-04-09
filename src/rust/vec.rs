@@ -1,12 +1,11 @@
 //! A module implementing a Vector type which can be parametized to support different
 //! floating point precision.
 
-use std::num::Float;
 use std::ops::{Add, Sub, Mul};
 
 pub type RFloat = f32;
 
-#[derive(PartialEq, Copy, Default, Debug)]
+#[derive(PartialEq, Clone, Copy, Default, Debug)]
 pub struct Vector {
     pub x: RFloat,
     pub y: RFloat,

@@ -1,6 +1,6 @@
 /// Implements a group of intersectable items
 
-use std::num::Float;
+use num::traits::Float;
 use super::vec::{Vector, RFloat};
 use std::default::Default;
 use std::iter::range_step_inclusive;
@@ -11,7 +11,7 @@ pub enum Pair<I, G> {
     Group(G),
 }
 
-type TypedGroupPair<B, I> = Pair<I, TypedGroup<B, I>>;
+pub type TypedGroupPair<B, I> = Pair<I, TypedGroup<B, I>>;
 
 /// A group with static dispatch on intersect calls, but dynamically allocated 
 /// array of items.
@@ -64,26 +64,6 @@ impl SphericalGroup {
     }
 }
 
-impl <B, I> TypedGroup<B, I> {
-
-    /// Returns (num_groups, num_items), where the items are our actual payload
-    fn count(&self) -> (usize, usize) {
-        let mut ng = 1usize;
-        let mut ni = 0usize;
-        for item in self.children.iter() {
-            match *item {
-                Pair::Item(_) => ni += 1,
-                Pair::Group(ref g) => {
-                    let (gng, gni) = g.count();
-                    ng += gng;
-                    ni += gni;
-                }
-            }
-        }
-        (ng, ni)
-    }    
-}
-
 impl<B, I> Intersectable for TypedGroup<B, I> where B: DistanceMeasure, I: Intersectable {
     fn intersect(&self, hit: &mut Hit, ray: &Ray){
         if self.bound.distance_from_ray(&ray) >= hit.distance {
@@ -105,6 +85,26 @@ pub type SphericalGroup = TypedGroup<Sphere, Sphere>;
 #[cfg(test)]
 mod tests {
     extern crate test;
+
+    impl <B, I> TypedGroup<B, I> {
+
+        /// Returns (num_groups, num_items), where the items are our actual payload
+        fn count(&self) -> (usize, usize) {
+            let mut ng = 1usize;
+            let mut ni = 0usize;
+            for item in self.children.iter() {
+                match *item {
+                    Pair::Item(_) => ni += 1,
+                    Pair::Group(ref g) => {
+                        let (gng, gni) = g.count();
+                        ng += gng;
+                        ni += gni;
+                    }
+                }
+            }
+            (ng, ni)
+        }    
+    }
 
     use super::*;
     use super::super::primitive::Intersectable;
@@ -181,7 +181,7 @@ mod tests {
         let (r1, r2, r3, g) = setup_group();
         let mut h = Hit::missed();
         b.iter(|| {
-            for _ in range(0, ITERATIONS) {
+            for _ in 0 .. ITERATIONS {
                 test::black_box(g.intersect(&mut h, &r1));
                 h.set_missed();
                 test::black_box(g.intersect(&mut h, &r2));

@@ -1,19 +1,22 @@
 #![cfg(not(test))]
-#![feature(std_misc,old_io,old_path,std_misc,unsafe_destructor,env,plugin)]
+#![feature(plugin,exit_status)]
 #![plugin(docopt_macros)]
 
 extern crate sphere_tracer;
-
+extern crate threadpool;
 extern crate docopt;
-extern crate "rustc-serialize" as rustc_serialize;
+extern crate rustc_serialize;
 
 
 use sphere_tracer::{Scene, Renderer, RenderOptions, PPMStdoutRGBABufferWriter, FileOrAnyWriter};
 use std::default::Default;
 use std::env;
-use std::sync::{TaskPool, Arc};
-use std::old_io;
-use std::old_path::Path;
+use std::sync::Arc;
+use std::ffi::OsStr;
+use std::{io, fs};
+use std::path::Path;
+
+use threadpool::ThreadPool;
 
 
 docopt!(Args derive Debug, "
@@ -46,23 +49,21 @@ fn main() {
                                                 .unwrap_or(1);
 
     let args: Args = Args::docopt().decode().unwrap_or_else(|e| e.exit());
-    let pool: TaskPool  = TaskPool::new(if args.flag_num_cores > 1
-                                        { args.flag_num_cores } else { nc_from_env });
+    let pool: ThreadPool  = ThreadPool::new(if args.flag_num_cores > 1
+                                            { args.flag_num_cores } else { nc_from_env });
 
     let mut output = if args.arg_OUTPUT_FILE != "-" {
-        let p = Path::new(args.arg_OUTPUT_FILE);
-        if p.extension().unwrap_or(b".UNSET") != b"tga" {
+        let p = Path::new(&args.arg_OUTPUT_FILE);
+        if p.extension().unwrap_or(OsStr::new(".UNSET")) != "tga" {
             println!("Output file '{}' must have the tga extension, e.g. {}", 
-                     p.as_str().unwrap(), 
-                     p.with_extension(b"tga").as_str().unwrap());
+                     p.to_str().unwrap(), 
+                     p.with_extension("tga").to_str().unwrap());
             return;
         }
-        let open_file = old_io::BufferedWriter::new(old_io::File::create(&p)
-                                                    .ok()
-                                                    .expect("Could not open output file"));
+        let open_file = io::BufWriter::new(fs::File::create(&p).unwrap());
         FileOrAnyWriter::FileWriter(open_file)
     } else {
-        FileOrAnyWriter::AnyWriter(old_io::stdout())
+        FileOrAnyWriter::AnyWriter(io::stdout())
     };
 
     let options = RenderOptions {   width: args.flag_width,

@@ -1,5 +1,6 @@
-#![feature(std_misc,core,old_io,collections,std_misc,unsafe_destructor)]
-#![feature(test)]
+#![feature(core,collections,unsafe_destructor,step_by)]
+#![cfg_attr(test, feature(test))]
+extern crate num;
 
 mod vec;
 mod primitive;
