@@ -2,7 +2,6 @@
 
 use super::vec::{Vector, RFloat};
 use std::default::Default;
-use std::iter::range_step_inclusive;
 use super::primitive::{DistanceMeasure, Intersectable, Ray, Sphere, Hit};
 
 pub enum Pair<I, G> {
@@ -43,8 +42,8 @@ impl SphericalGroup {
         g.bound.radius = 3.0 * r;
 
         let rn: RFloat = 3.0 * r / 12.0f32.sqrt();
-        for dz in range_step_inclusive(-1i32, 1, 2) {
-            for dx in range_step_inclusive(-1i32, 1, 2) {
+        for dz in (-1i32..2).step_by(2) {
+            for dx in (-1i32..2).step_by(2) {
                 let np = *p + Vector { x: dx as RFloat * rn,
                                        y: rn, 
                                        z: dz as RFloat * rn };

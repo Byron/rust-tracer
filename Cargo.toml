@@ -19,7 +19,6 @@ path = "src/rust/main.rs"
 
 [dependencies]
 time = "*"
-docopt = "*"
 threadpool = "*"
-rustc-serialize = "*"
-docopt_macros = "*"
+num = "*"
+clap = "*"

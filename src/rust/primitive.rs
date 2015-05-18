@@ -117,6 +117,8 @@ mod sphere {
     use super::*;
     use std::default::Default;
     use super::super::vec::Vector;
+
+    use std::f32;
     
 
     fn setup_scene() -> (Ray, Ray, Sphere) {

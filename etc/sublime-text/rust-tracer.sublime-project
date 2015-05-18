@@ -14,5 +14,19 @@
 				"*.tga"
 			]
 		}
-	]
+	],
+	"SublimeLinter":
+    {
+        "linters":
+        {
+			"rust": {
+                "@disable": false,
+                "args": [],
+                "crate-root": null,
+                "excludes": [],
+                "use-cargo": true,
+                "use-crate-root": true
+            },
+        }
+    }
 }

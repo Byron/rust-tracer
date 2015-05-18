@@ -304,7 +304,6 @@ pub struct PPMStdoutRGBABufferWriter<'a> {
 
 // It's required to mark it unsafe, as the compiler apparently can't verify 
 // that our `out` reference is still valid (even though the bounds say just that)
-#[unsafe_destructor]
 impl<'a> Drop for PPMStdoutRGBABufferWriter<'a> {
     fn drop(&mut self) {
         self.write_buffer_with_header();

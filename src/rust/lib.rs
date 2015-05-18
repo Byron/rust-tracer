@@ -1,4 +1,4 @@
-#![feature(core,collections,unsafe_destructor,step_by)]
+#![feature(collections, step_by)]
 #![cfg_attr(test, feature(test))]
 
 mod vec;

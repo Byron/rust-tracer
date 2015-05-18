@@ -1,14 +1,12 @@
 #![cfg(not(test))]
-#![feature(plugin,exit_status)]
-#![plugin(docopt_macros)]
 
 extern crate sphere_tracer;
 extern crate threadpool;
-extern crate docopt;
-extern crate rustc_serialize;
+extern crate clap;
 
 
 use sphere_tracer::{Scene, Renderer, RenderOptions, PPMStdoutRGBABufferWriter, FileOrAnyWriter};
+
 use std::default::Default;
 use std::env;
 use std::sync::Arc;
@@ -17,10 +15,10 @@ use std::{io, fs};
 use std::path::Path;
 
 use threadpool::ThreadPool;
+use clap::{App}
 
-
-docopt!(Args derive Debug, "
-Usage: rtrace [options] (<OUTPUT-FILE>|-)
+const USAGE: &'static str = 
+"Usage: rtrace [options] (<OUTPUT-FILE>|-)
        rtrace --help
 
 Options:
@@ -32,12 +30,7 @@ Options:
                                environment variable, e.g. RTRACEMAXPROCS=4.
                                The commandline always overrides environment variables.
 
-<OUTPUT-FILE>|-     Either a file with .tga extension, or - to write file to stdout
-"
-, flag_samples_per_pixel: u16
-, flag_height: u16
-, flag_width: u16
-, flag_num_cores: usize);
+<OUTPUT-FILE>|-     Either a file with .tga extension, or - to write file to stdout";
 
 
 #[allow(dead_code)]
