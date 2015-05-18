@@ -1,7 +1,7 @@
 [package]
 
 name = "rtrace"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Sebastian Thiel <byronimo@gmail.com>"]
 description = "A pet raytracer to test overall pseudo-performance and multi-threading"
 repository = "https://github.com/Byron/rust-tracer"
