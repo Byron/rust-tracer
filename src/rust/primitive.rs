@@ -112,7 +112,6 @@ mod primitive_tests {
 #[cfg(test)]
 mod sphere {
     extern crate test;
-    extern crate num;
 
     use super::*;
     use std::default::Default;
