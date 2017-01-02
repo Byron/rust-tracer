@@ -1,8 +1,8 @@
-extern crate time;
 extern crate threadpool;
 
 /// Implements the actual raytracer which produces the final image
 use std::ops::{Drop, Deref};
+use std::time::{Duration, Instant};
 use std::sync::Arc;
 use std::{io,fs};
 use std::default::Default;
@@ -298,7 +298,7 @@ pub struct PPMStdoutRGBABufferWriter<'a> {
     height: Option<u16>,
     image: Option<RGBABuffer>,
     rgb: bool,
-    last_written_at: Option<time::Tm>,
+    last_written_at: Option<Instant>,
     buffer_dirty: bool,
 }
 
@@ -389,8 +389,8 @@ impl<'a> RGBABufferWriter for PPMStdoutRGBABufferWriter<'a> {
         // Flush full image right away
         if self.output_is_file() && (
                 self.last_written_at.is_none() || 
-                self.last_written_at.unwrap() + time::Duration::seconds(1) <= time::now()) {
-            self.last_written_at = Some(time::now());
+                self.last_written_at.unwrap() + Duration::from_secs(1) <= Instant::now()) {
+            self.last_written_at = Some(Instant::now());
             self.write_buffer_with_header();
         }
     }

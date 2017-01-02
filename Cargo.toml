@@ -18,7 +18,6 @@ name = "rtrace"
 path = "src/rust/main.rs"
 
 [dependencies]
-time = "*"
 threadpool = "1"
 num = "0.1"
 clap = "2"
