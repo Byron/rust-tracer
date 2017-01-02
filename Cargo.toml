@@ -19,6 +19,6 @@ path = "src/rust/main.rs"
 
 [dependencies]
 time = "*"
-threadpool = "*"
-num = "*"
-clap = "*"
+threadpool = "1"
+num = "0.1"
+clap = "2"

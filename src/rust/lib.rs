@@ -1,4 +1,4 @@
-#![feature(step_by, clone_from_slice)]
+#![feature(step_by)]
 #![cfg_attr(test, feature(test))]
 
 mod vec;
