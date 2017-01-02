@@ -18,9 +18,11 @@ impl Add for Vector {
     // Probably it will be optimized to not actually copy self and rhs for each call !
     #[inline(always)]
     fn add(self, rhs: Vector) -> Vector {
-      Vector {  x: self.x + rhs.x,
-                y: self.y + rhs.y, 
-                z: self.z + rhs.z }
+        Vector {
+            x: self.x + rhs.x,
+            y: self.y + rhs.y,
+            z: self.z + rhs.z,
+        }
     }
 }
 
@@ -29,10 +31,12 @@ impl Sub for Vector {
 
     #[inline(always)]
     fn sub(self, rhs: Vector) -> Vector {
-      Vector {  x: self.x - rhs.x,
-                y: self.y - rhs.y, 
-                z: self.z - rhs.z }
-    }   
+        Vector {
+            x: self.x - rhs.x,
+            y: self.y - rhs.y,
+            z: self.z - rhs.z,
+        }
+    }
 }
 
 impl Mul for Vector {
@@ -40,10 +44,12 @@ impl Mul for Vector {
 
     #[inline(always)]
     fn mul(self, rhs: Vector) -> Vector {
-      Vector {  x: self.x * rhs.x,
-                y: self.y * rhs.y, 
-                z: self.z * rhs.z }
-    }   
+        Vector {
+            x: self.x * rhs.x,
+            y: self.y * rhs.y,
+            z: self.z * rhs.z,
+        }
+    }
 }
 
 impl<'a> Vector {
@@ -98,7 +104,11 @@ mod tests {
 
     #[test]
     fn basics() {
-        let v32 = Vector { x: 5.0, y: 4.0, z: 0.0 };
+        let v32 = Vector {
+            x: 5.0,
+            y: 4.0,
+            z: 0.0,
+        };
         assert_eq!(v32.x, 5.0);
         assert_eq!(v32, v32);
         assert!(!(v32 != v32));
@@ -108,7 +118,11 @@ mod tests {
             copy.x = 10.0;
         }
 
-        let v64 = Vector { x: 1.0, y: 2.0, z: 3.0, };
+        let v64 = Vector {
+            x: 1.0,
+            y: 2.0,
+            z: 3.0,
+        };
         assert_eq!(v64.x, 1.0);
 
 
@@ -124,7 +138,7 @@ mod tests {
 
         // Multiplication
         let v = v32 * v32;
-        assert_eq!(v.x , v32.x * v32.x);
+        assert_eq!(v.x, v32.x * v32.x);
 
         let mut v = v32.mulfed(3.0);
         assert_eq!(v.x, v32.x * 3.0);
@@ -142,7 +156,11 @@ mod tests {
 
     #[test]
     fn normalize() {
-        let v = Vector { x: 2.0, y: 0.0, z: 0.0 };
+        let v = Vector {
+            x: 2.0,
+            y: 0.0,
+            z: 0.0,
+        };
         assert_eq!(v.len(), 2.0);
         assert_eq!(v.normalized().len(), 1.0);
 

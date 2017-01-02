@@ -4,7 +4,7 @@ extern crate threadpool;
 use std::ops::{Drop, Deref};
 use std::time::{Duration, Instant};
 use std::sync::Arc;
-use std::{io,fs};
+use std::{io, fs};
 use std::default::Default;
 use std::sync::mpsc::sync_channel;
 use super::vec::{Vector, RFloat};
@@ -22,7 +22,7 @@ pub trait RGBABufferWriter {
     /// x and y are the total image resolution
     fn begin(&mut self, x: u16, y: u16);
 
-    /// Write the given RGBA buffer - it's image region might be anywhere within 
+    /// Write the given RGBA buffer - it's image region might be anywhere within
     /// our confines of total x and y resolution.
     /// This must be assured by the caller
     /// Color range is 0.0 to 1.0, everything higher is truncated
@@ -61,10 +61,7 @@ impl ImageRegion {
     }
 
     pub fn contains(&self, o: &ImageRegion) -> bool {
-        return  o.l >= self.l && 
-                o.b >= self.b &&
-                o.t <= self.t &&
-                o.r <= self.r
+        return o.l >= self.l && o.b >= self.b && o.t <= self.t && o.r <= self.r;
     }
 
     /// x and y absolute to our rectangle ! Returns offset relative to our buffer
@@ -83,11 +80,8 @@ impl RGBABuffer {
     fn new(r: &ImageRegion) -> RGBABuffer {
         let mut v = Vec::with_capacity(r.area() * RGBABuffer::components());
         let l = v.capacity();
-        unsafe {v.set_len(l)};
-        RGBABuffer {
-            buf: v,
-            reg: *r,
-        }
+        unsafe { v.set_len(l) };
+        RGBABuffer { buf: v, reg: *r }
     }
 
     fn components() -> usize {
@@ -97,7 +91,7 @@ impl RGBABuffer {
     /// x and y must be absolute to our recangle !
     fn set_pixel_from_vector(&mut self, x: u16, y: u16, p: &Vector, alpha: RFloat) {
         let ofs = self.reg.buffer_offset(x, y) * RGBABuffer::components();
-        let c = &mut self.buf[ofs .. ofs + RGBABuffer::components()];
+        let c = &mut self.buf[ofs..ofs + RGBABuffer::components()];
 
         let scale = |v| -> u8 {
 
@@ -121,13 +115,13 @@ impl RGBABuffer {
 
         if self.reg == b.reg {
             self.buf = b.buf.clone();
-            return
+            return;
         }
 
-        for y in b.reg.b .. b.reg.t {
+        for y in b.reg.b..b.reg.t {
             let bl = self.reg.buffer_offset(b.reg.l, y) * RGBABuffer::components(); // bottom_left
             let their_bl = b.reg.buffer_offset(b.reg.l, y) * RGBABuffer::components();
-            self.buf[bl .. bl + w].clone_from_slice(&b.buf[their_bl .. their_bl + w]);
+            self.buf[bl..bl + w].clone_from_slice(&b.buf[their_bl..their_bl + w]);
         }
     }
 
@@ -150,28 +144,46 @@ pub struct Scene {
 impl Default for Scene {
     fn default() -> Scene {
         Scene {
-            group: SphericalGroup::pyramid(8, &Vector { x: 0.0, 
-                                                        y: -1.0, 
-                                                        z: 0.0 }, 1.0),
-            directional_light: Vector { x: -1.0, y: -3.0, z: 2.0 }.normalized(),
-            eye: Vector { x: 0.0, y: 0.0, z: -4.0 }
+            group: SphericalGroup::pyramid(8,
+                                           &Vector {
+                                               x: 0.0,
+                                               y: -1.0,
+                                               z: 0.0,
+                                           },
+                                           1.0),
+            directional_light: Vector {
+                    x: -1.0,
+                    y: -3.0,
+                    z: 2.0,
+                }
+                .normalized(),
+            eye: Vector {
+                x: 0.0,
+                y: 0.0,
+                z: -4.0,
+            },
         }
     }
 }
 
 impl Renderer {
-
     #[inline]
     fn raytrace(s: &Scene, r: &Ray, c: &mut Vector) -> RFloat {
-        const OBJECT: Vector = Vector { x: 0xae as RFloat / 255.0, 
-                                        y: 0x31 as RFloat / 255.0, 
-                                        z: 0x31 as RFloat / 255.0};
-        const BACKGROUND: Vector = Vector { x: 0x22 as RFloat / 255.0, 
-                                            y: 0x0a as RFloat / 255.0, 
-                                            z: 0x0a as RFloat / 255.0};
-        const AMBIENT_OFFSET: Vector = Vector { x: BACKGROUND.x * 0.8, 
-                                                y: BACKGROUND.y * 0.8, 
-                                                z: BACKGROUND.z * 0.8 };
+        const OBJECT: Vector = Vector {
+            x: 0xae as RFloat / 255.0,
+            y: 0x31 as RFloat / 255.0,
+            z: 0x31 as RFloat / 255.0,
+        };
+        const BACKGROUND: Vector = Vector {
+            x: 0x22 as RFloat / 255.0,
+            y: 0x0a as RFloat / 255.0,
+            z: 0x0a as RFloat / 255.0,
+        };
+        const AMBIENT_OFFSET: Vector = Vector {
+            x: BACKGROUND.x * 0.8,
+            y: BACKGROUND.y * 0.8,
+            z: BACKGROUND.z * 0.8,
+        };
 
         let mut h = Hit::missed();
         s.group.intersect(&mut h, r);
@@ -184,21 +196,21 @@ impl Renderer {
             *c = *c + AMBIENT_OFFSET;
             return 0.0;
         }
-        let p = r.pos + 
-                    (r.dir.mulfed(h.distance)) + 
-                    *h.pos.mulf(h.distance * f32::EPSILON.sqrt());
+        let p = r.pos + (r.dir.mulfed(h.distance)) + *h.pos.mulf(h.distance * f32::EPSILON.sqrt());
 
         // if there is something between us and the light, we are in shadow
         h.set_missed();
         s.group.intersect(&mut h,
-                          &Ray { pos: p,
-                                  dir: s.directional_light.mulfed(-1.0) });
+                          &Ray {
+                              pos: p,
+                              dir: s.directional_light.mulfed(-1.0),
+                          });
         if h.has_missed() {
             *c = *c + OBJECT.mulfed(-g) + AMBIENT_OFFSET;
-            return 1.0
+            return 1.0;
         } else {
             *c = *c + BACKGROUND + AMBIENT_OFFSET.mulfed(-g);
-            return 0.0
+            return 0.0;
         }
     }
 
@@ -211,16 +223,18 @@ impl Renderer {
         let width = o.width as RFloat;
         let height = o.height as RFloat;
 
-        let mut ray = Ray { pos: scene.eye, 
-                            dir: Default::default() };
+        let mut ray = Ray {
+            pos: scene.eye,
+            dir: Default::default(),
+        };
 
-        for y in region.b .. region.t {
-            for x in region.l .. region.r {
+        for y in region.b..region.t {
+            for x in region.l..region.r {
                 let mut g: Vector = Default::default();
                 let mut alpha: RFloat = 0.0;
 
-                for ssx in 0 .. o.samples_per_pixel {
-                    for ssy in 0 .. o.samples_per_pixel {
+                for ssx in 0..o.samples_per_pixel {
+                    for ssy in 0..o.samples_per_pixel {
                         let xres = x as RFloat + ssx as RFloat / ssf;
                         let yres = y as RFloat + ssy as RFloat / ssf;
                         ray.dir.x = xres - width / 2.0;
@@ -243,7 +257,9 @@ impl Renderer {
     // Use runtime dispatching for the image writer to remain flexible
     // (And to test this ;))
     // sets up multi-threading accordingly
-    pub fn render(o: &RenderOptions, scene: Arc<Scene>, writer: &mut RGBABufferWriter, 
+    pub fn render(o: &RenderOptions,
+                  scene: Arc<Scene>,
+                  writer: &mut RGBABufferWriter,
                   pool: &ThreadPool) {
         const CHUNK_SIZE: u16 = 64;
         assert!(o.width % CHUNK_SIZE == 0, "TODO: handle chunk sizes");
@@ -264,9 +280,13 @@ impl Renderer {
 
                 count += 1;
 
-                pool.execute(move|| {
-                    let mut b = RGBABuffer::new(&ImageRegion { l: x, r: x + CHUNK_SIZE, 
-                                                               b: y, t: y + CHUNK_SIZE });
+                pool.execute(move || {
+                    let mut b = RGBABuffer::new(&ImageRegion {
+                        l: x,
+                        r: x + CHUNK_SIZE,
+                        b: y,
+                        t: y + CHUNK_SIZE,
+                    });
 
                     Renderer::render_region(&opts, tscene.deref(), &mut b);
 
@@ -285,7 +305,8 @@ impl Renderer {
                 break;
             }
         }
-        assert!(count == 0, "We really should have processed all chunks here");
+        assert!(count == 0,
+                "We really should have processed all chunks here");
     }
 }
 
@@ -305,7 +326,7 @@ pub struct PPMStdoutRGBABufferWriter<'a> {
     buffer_dirty: bool,
 }
 
-// It's required to mark it unsafe, as the compiler apparently can't verify 
+// It's required to mark it unsafe, as the compiler apparently can't verify
 // that our `out` reference is still valid (even though the bounds say just that)
 impl<'a> Drop for PPMStdoutRGBABufferWriter<'a> {
     fn drop(&mut self) {
@@ -315,18 +336,19 @@ impl<'a> Drop for PPMStdoutRGBABufferWriter<'a> {
 
 impl<'a> PPMStdoutRGBABufferWriter<'a> {
     pub fn new(write_rgb: bool, writer: &'a mut FileOrAnyWriter) -> PPMStdoutRGBABufferWriter<'a> {
-        PPMStdoutRGBABufferWriter {out: writer,
-                                   image: None,
-                                   width: None,
-                                   height: None,
-                                   rgb: write_rgb,
-                                   last_written_at: None,
-                                   buffer_dirty: false }
+        PPMStdoutRGBABufferWriter {
+            out: writer,
+            image: None,
+            width: None,
+            height: None,
+            rgb: write_rgb,
+            last_written_at: None,
+            buffer_dirty: false,
+        }
     }
 }
 
 impl<'a> PPMStdoutRGBABufferWriter<'a> {
-
     fn output_is_file(&self) -> bool {
         match *self.out {
             FileOrAnyWriter::FileWriter(_) => true,
@@ -336,7 +358,7 @@ impl<'a> PPMStdoutRGBABufferWriter<'a> {
 
     fn write_buffer_with_header(&mut self) {
         if !self.buffer_dirty {
-            return
+            return;
         }
 
         let out: &mut io::Write = match *self.out {
@@ -345,7 +367,7 @@ impl<'a> PPMStdoutRGBABufferWriter<'a> {
                 w.get_mut().seek(io::SeekFrom::Start(0)).unwrap();
                 w
             }
-            FileOrAnyWriter::AnyWriter(ref mut w) => w
+            FileOrAnyWriter::AnyWriter(ref mut w) => w,
         };
 
         let mut ptype: &str = "P5";
@@ -353,12 +375,15 @@ impl<'a> PPMStdoutRGBABufferWriter<'a> {
             ptype = "P6"
         }
         writeln!(out, "{}", ptype).unwrap();
-        writeln!(out, "{} {}", self.width.expect("begin() called"),
-                          self.height.expect("begin() called")).unwrap();
+        writeln!(out,
+                 "{} {}",
+                 self.width.expect("begin() called"),
+                 self.height.expect("begin() called"))
+            .unwrap();
         writeln!(out, "255").unwrap();
 
         // We always write our entire buffer - it will just be zero initially
-        
+
 
         let buf = self.image.as_ref().unwrap().buffer();
         // Can't write entire buffer :( thanks to alpha channel.
@@ -366,7 +391,7 @@ impl<'a> PPMStdoutRGBABufferWriter<'a> {
         let step = RGBABuffer::components();
         let po_max = buf.len();
         while po < po_max {
-            let b = &buf[po .. po + 3];
+            let b = &buf[po..po + 3];
 
             if self.rgb {
                 out.write_all(b).unwrap();
@@ -385,8 +410,13 @@ impl<'a> PPMStdoutRGBABufferWriter<'a> {
 impl<'a> RGBABufferWriter for PPMStdoutRGBABufferWriter<'a> {
     fn begin(&mut self, x: u16, y: u16) {
         self.width = Some(x);
-        self.height= Some(y);
-        self.image = Some(RGBABuffer::new(&ImageRegion { l: 0, r: x, b: 0, t: y }));
+        self.height = Some(y);
+        self.image = Some(RGBABuffer::new(&ImageRegion {
+            l: 0,
+            r: x,
+            b: 0,
+            t: y,
+        }));
     }
 
     fn write_rgba_buffer(&mut self, buffer: &RGBABuffer) {
@@ -394,9 +424,9 @@ impl<'a> RGBABufferWriter for PPMStdoutRGBABufferWriter<'a> {
         self.buffer_dirty = true;
 
         // Flush full image right away
-        if self.output_is_file() && (
-                self.last_written_at.is_none() || 
-                self.last_written_at.unwrap() + Duration::from_secs(1) <= Instant::now()) {
+        if self.output_is_file() &&
+           (self.last_written_at.is_none() ||
+            self.last_written_at.unwrap() + Duration::from_secs(1) <= Instant::now()) {
             self.last_written_at = Some(Instant::now());
             self.write_buffer_with_header();
         }
@@ -437,7 +467,11 @@ mod tests {
     fn basic_rendering() {
         let s: Arc<Scene> = Arc::new(Default::default());
         let pool = ThreadPool::new(1);
-        let options = RenderOptions { width: W as u16, height: H as u16, samples_per_pixel: 2 };
+        let options = RenderOptions {
+            width: W as u16,
+            height: H as u16,
+            samples_per_pixel: 2,
+        };
 
         let mut dw: DummyWriter = Default::default();
         Renderer::render(&options, s.clone(), &mut dw, &pool);
@@ -448,10 +482,15 @@ mod tests {
 
     #[test]
     fn image_region() {
-        let r = ImageRegion { l: 2, t: 18, r: 34, b: 2 };
+        let r = ImageRegion {
+            l: 2,
+            t: 18,
+            r: 34,
+            b: 2,
+        };
         assert_eq!(r.width(), 32);
         assert_eq!(r.height(), 16);
-        assert_eq!(r.area(), 16*32);
+        assert_eq!(r.area(), 16 * 32);
         assert!(r.contains(&r));
         let mut l = r;
         l.l = 1;
@@ -464,7 +503,11 @@ mod tests {
         const SPP: usize = 1;
         let pool = ThreadPool::new(4);
         let s: Arc<Scene> = Arc::new(Default::default());
-        let options = RenderOptions { width: H as u16, height: H as u16, samples_per_pixel: SPP as u16 };
+        let options = RenderOptions {
+            width: H as u16,
+            height: H as u16,
+            samples_per_pixel: SPP as u16,
+        };
 
         let mut dw: DummyWriter = Default::default();
         b.iter(|| {

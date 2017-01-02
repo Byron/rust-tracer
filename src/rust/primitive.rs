@@ -1,4 +1,4 @@
-//! Allows to setup a scene with scenes in pyramidal layout, along with traits 
+//! Allows to setup a scene with scenes in pyramidal layout, along with traits
 //! to help shooting rays to check for intersections
 
 use super::vec::{Vector, RFloat};
@@ -9,7 +9,7 @@ use std::f32;
 #[derive(Default, PartialEq, Clone, Copy, Debug)]
 pub struct Ray {
     pub pos: Vector,
-    pub dir: Vector
+    pub dir: Vector,
 }
 
 #[derive(Clone, Copy)]
@@ -101,8 +101,10 @@ mod primitive_tests {
 
     #[test]
     fn ray_defaults() {
-        let r1: Ray = Ray {pos: Default::default(),
-                                dir: Default::default() };
+        let r1: Ray = Ray {
+            pos: Default::default(),
+            dir: Default::default(),
+        };
 
         let r2: Ray = Default::default();
         assert_eq!(r1, r2);
@@ -118,18 +120,24 @@ mod sphere {
     use super::super::vec::Vector;
 
     use std::f32;
-    
+
 
     fn setup_scene() -> (Ray, Ray, Sphere) {
-        let s = Sphere { center: Default::default(),
-                                 radius: 1.0 };
+        let s = Sphere {
+            center: Default::default(),
+            radius: 1.0,
+        };
 
         let mut dir: Vector = Default::default();
         dir.x = -1.0;
-        let r1 = Ray { pos: Vector { x: 2.0, 
-                                     y: 0.0, 
-                                     z: 0.0 },
-                               dir: dir};
+        let r1 = Ray {
+            pos: Vector {
+                x: 2.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            dir: dir,
+        };
         let mut r2 = r1;
         r2.dir.x = -r2.dir.x;   // invert direction
         (r1, r2, s)
@@ -146,8 +154,11 @@ mod sphere {
             assert_eq!(dfr, f32::INFINITY);
         }
 
-        { 
-            let mut h = Hit { distance: 2.0, pos: Default::default() };
+        {
+            let mut h = Hit {
+                distance: 2.0,
+                pos: Default::default(),
+            };
             s.intersect(&mut h, &r1);
             assert_eq!(h.distance, 1.0);
             assert_eq!(h.pos.x, 1.0);
@@ -173,7 +184,7 @@ mod sphere {
     fn bench_ray_sphere(b: &mut test::Bencher) {
         let (r1, r2, s) = setup_scene();
         b.iter(|| {
-            for _ in 0 .. NUM_ITERATIONS {
+            for _ in 0..NUM_ITERATIONS {
                 test::black_box(s.distance_from_ray(&r1));
                 test::black_box(s.distance_from_ray(&r2));
             }
@@ -186,7 +197,7 @@ mod sphere {
         let (r1, r2, s) = setup_scene();
         let mut h = Hit::missed();
         b.iter(|| {
-            for _ in 0 .. NUM_ITERATIONS {
+            for _ in 0..NUM_ITERATIONS {
                 h.set_missed();
                 test::black_box(s.intersect(&mut h, &r1));
                 h.set_missed();

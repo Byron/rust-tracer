@@ -11,7 +11,7 @@ pub enum Pair<I, G> {
 
 pub type TypedGroupPair<B, I> = Pair<I, TypedGroup<B, I>>;
 
-/// A group with static dispatch on intersect calls, but dynamically allocated 
+/// A group with static dispatch on intersect calls, but dynamically allocated
 /// array of items.
 #[derive(Default)]
 pub struct TypedGroup<B, I> {
@@ -21,11 +21,10 @@ pub struct TypedGroup<B, I> {
 
 // }
 
-/// It's interesting that 'type' is indeed a new type, and not a type-def ! At least 
+/// It's interesting that 'type' is indeed a new type, and not a type-def ! At least
 /// when used in this situation !!!
 /// We actually have our own type methods, but would share instance methods
 impl SphericalGroup {
-
     fn pyramid_recursive(level: u32, p: &Vector, r: RFloat) -> TypedGroupPair<Sphere, Sphere> {
         let s = Sphere {
             center: *p,
@@ -44,17 +43,21 @@ impl SphericalGroup {
         let rn: RFloat = 3.0 * r / 12.0f32.sqrt();
         for dz in [-1i32, 1].iter().cloned() {
             for dx in [-1i32, 1].iter().cloned() {
-                let np = *p + Vector { x: dx as RFloat * rn,
-                                       y: rn, 
-                                       z: dz as RFloat * rn };
-                g.children.push(SphericalGroup::pyramid_recursive(level-1, &np, r * 0.5));
+                let np = *p +
+                         Vector {
+                    x: dx as RFloat * rn,
+                    y: rn,
+                    z: dz as RFloat * rn,
+                };
+                g.children.push(SphericalGroup::pyramid_recursive(level - 1, &np, r * 0.5));
             }
         }
         Pair::Group(g)
     }
 
     pub fn pyramid(level: u32, origin: &Vector, radius: RFloat) -> SphericalGroup {
-        assert!(level > 1, "Levels equal or smaller than one cause empty groups");
+        assert!(level > 1,
+                "Levels equal or smaller than one cause empty groups");
         match SphericalGroup::pyramid_recursive(level, origin, radius) {
             Pair::Group(g) => g,
             _ => unreachable!(),
@@ -62,10 +65,13 @@ impl SphericalGroup {
     }
 }
 
-impl<B, I> Intersectable for TypedGroup<B, I> where B: DistanceMeasure, I: Intersectable {
-    fn intersect(&self, hit: &mut Hit, ray: &Ray){
+impl<B, I> Intersectable for TypedGroup<B, I>
+    where B: DistanceMeasure,
+          I: Intersectable
+{
+    fn intersect(&self, hit: &mut Hit, ray: &Ray) {
         if self.bound.distance_from_ray(&ray) >= hit.distance {
-            return
+            return;
         }
 
         for item in self.children.iter() {
@@ -84,8 +90,7 @@ pub type SphericalGroup = TypedGroup<Sphere, Sphere>;
 mod tests {
     extern crate test;
 
-    impl <B, I> TypedGroup<B, I> {
-
+    impl<B, I> TypedGroup<B, I> {
         /// Returns (num_groups, num_items), where the items are our actual payload
         fn count(&self) -> (usize, usize) {
             let mut ng = 1usize;
@@ -101,7 +106,7 @@ mod tests {
                 }
             }
             (ng, ni)
-        }    
+        }
     }
 
     use super::*;
@@ -111,8 +116,10 @@ mod tests {
     use std::default::Default;
 
     fn setup_group() -> (Ray, Ray, Ray, SphericalGroup) {
-        let s1 = Sphere {center: Default::default(),
-                         radius: 1.0 };
+        let s1 = Sphere {
+            center: Default::default(),
+            radius: 1.0,
+        };
         let mut s2: Sphere = Default::default();
         s2.center.z = s2.radius * 2.0;
 
@@ -164,9 +171,13 @@ mod tests {
 
     #[test]
     fn pyramid() {
-        let g = SphericalGroup::pyramid(8, &Vector { x: 1.0, 
-                                                     y: -1.0, 
-                                                     z: 0.0 }, 1.0);
+        let g = SphericalGroup::pyramid(8,
+                                        &Vector {
+                                            x: 1.0,
+                                            y: -1.0,
+                                            z: 0.0,
+                                        },
+                                        1.0);
 
         assert_eq!(g.children.len(), 5);
         assert_eq!(g.count(), (5461, 21845));
@@ -179,7 +190,7 @@ mod tests {
         let (r1, r2, r3, g) = setup_group();
         let mut h = Hit::missed();
         b.iter(|| {
-            for _ in 0 .. ITERATIONS {
+            for _ in 0..ITERATIONS {
                 test::black_box(g.intersect(&mut h, &r1));
                 h.set_missed();
                 test::black_box(g.intersect(&mut h, &r2));
