@@ -42,8 +42,8 @@ impl SphericalGroup {
         g.bound.radius = 3.0 * r;
 
         let rn: RFloat = 3.0 * r / 12.0f32.sqrt();
-        for dz in (-1i32..2).step_by(2) {
-            for dx in (-1i32..2).step_by(2) {
+        for dz in [-1i32, 1].iter().cloned() {
+            for dx in [-1i32, 1].iter().cloned() {
                 let np = *p + Vector { x: dx as RFloat * rn,
                                        y: rn, 
                                        z: dz as RFloat * rn };

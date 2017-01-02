@@ -254,9 +254,10 @@ impl Renderer {
         // Push all tasks
         let (tx, rx) = sync_channel::<RGBABuffer>(4);
         let mut count = 0usize;
-        for y in (0u16 .. o.height).step_by(CHUNK_SIZE)  {
-            for x in (0u16 .. o.width).step_by(CHUNK_SIZE) {
-
+        let mut y = 0u16;
+        while y < o.height {
+            let mut x = 0u16;
+            while x < o.width {
                 let tx = tx.clone();
                 let opts = *o;
                 let tscene = scene.clone();
@@ -271,7 +272,9 @@ impl Renderer {
 
                     tx.send(b).ok().expect("Channel should be open !");
                 });
+                x += CHUNK_SIZE;
             }
+            y += CHUNK_SIZE;
         }
 
         // Read the results and pass them to the writer
@@ -359,7 +362,10 @@ impl<'a> PPMStdoutRGBABufferWriter<'a> {
 
         let buf = self.image.as_ref().unwrap().buffer();
         // Can't write entire buffer :( thanks to alpha channel.
-        for po in (0 .. buf.len()).step_by(RGBABuffer::components()) {
+        let mut po = 0;
+        let step = RGBABuffer::components();
+        let po_max = buf.len();
+        while po < po_max {
             let b = &buf[po .. po + 3];
 
             if self.rgb {
@@ -368,6 +374,7 @@ impl<'a> PPMStdoutRGBABufferWriter<'a> {
                 let avg = ((b[0] as f32 + b[1] as f32 + b[2] as f32) / 3.0f32) as u8;
                 out.write(&[avg]).unwrap();
             }
+            po += step;
         }
 
         out.flush().ok();

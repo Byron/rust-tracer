@@ -1,4 +1,3 @@
-#![feature(step_by)]
 #![cfg_attr(test, feature(test))]
 
 mod vec;
